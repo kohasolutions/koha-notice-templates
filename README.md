@@ -63,6 +63,12 @@ notice somebody has changed unless you add `--force`. The values in your top blo
 version. `--library-name` changes the text, not the subject line, which uses the branch name in Koha. It needs a user
 who may `sudo koha-shell`; hosted libraries copy and paste instead.
 
+## Adding values
+
+[VARIABLES.md](VARIABLES.md) lists the Koha values you can add to each notice, with the code to copy. Each one was
+printed by a real Koha in that notice and compared with the database; `variables.json` is the same list for programs
+(`tools/variables.mjs` makes both).
+
 ## How the notices are tested
 
 `node tools/render.mjs` runs every template inside a real Koha (a

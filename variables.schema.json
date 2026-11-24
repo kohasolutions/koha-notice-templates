@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Values a librarian can put in each Koha notice, proved by tools/variables.mjs",
+  "type": "object",
+  "required": ["koha", "excluded", "notices"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "koha": { "type": "string" },
+    "excluded": { "type": "object", "additionalProperties": { "type": "string" } },
+    "notices": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["zones", "note", "variables", "rejected"],
+        "properties": {
+          "zones": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "note": { "type": "string" },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["key", "label", "insert", "filter", "may_be_empty", "insert_if_present", "cases", "valid_in"],
+              "additionalProperties": false,
+              "properties": {
+                "key": { "type": "string", "pattern": "^[a-z]+\\.[a-z0-9_]+$" },
+                "label": { "type": "string" },
+                "insert": { "type": "string" },
+                "filter": { "type": ["string", "null"] },
+                "may_be_empty": { "type": "boolean" },
+                "insert_if_present": { "type": ["string", "null"] },
+                "cases": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+                "valid_in": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+              }
+            }
+          },
+          "rejected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["key", "label", "expression", "reason", "valid_in"],
+              "additionalProperties": false,
+              "properties": {
+                "key": { "type": "string" },
+                "label": { "type": "string" },
+                "expression": { "type": "string" },
+                "reason": { "type": "string" },
+                "valid_in": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

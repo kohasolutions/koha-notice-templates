@@ -22,6 +22,7 @@ jobs:
       - run: node tools/lint.mjs
         env:
           CI: '1'
+      - run: node tools/variables.mjs --check
       - run: node --test tests/*.test.mjs
 
   readme:

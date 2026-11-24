@@ -70,7 +70,9 @@ for my $n ( @{ $input->{notices} } ) {
     try {
         my $s = setup_sample();
         save_letter($n);
+        probe_start($n) if $n->{probe};    # tools/variables.mjs only
         my $out = run_scenario( $n, $s );
+        $out->{db} = probe_db() if $n->{probe};
         %r = ( %r, %$out, ok => 1, sample => $s->{summary} );
     } catch {
         my ($e) = split /\n/, "$_";    # Koha's first line says what went wrong; the stack trace below it does not
@@ -759,4 +761,140 @@ sub scenario_password_reset {
     $out->{must} = [ C4::Context->preference('OPACBaseURL') . '/cgi-bin/koha/opac-password-recovery.pl?uniqueKey=SAMPLE-KEY' ];
     die "a key that is not in Koha's table is in the message\n" if $out->{content} =~ /uniqueKey=(?!SAMPLE-KEY)\S/;
     return $out;
+}
+
+# ── variable probes (tools/variables.mjs) ────────────────────────────────────────────────────────────────────────
+# "full": every optional value of the sample patron, library and records is filled; "bare": they are all empty. Filled
+# now and again just before each rendering, because some scenarios create the patron themselves. All rolled back.
+my ( $probe_mode, %probe_prefs, $real_process_tt );
+BEGIN { $probe_mode = '' }
+
+sub probe_start {
+    my ($n) = @_;
+    $probe_mode = $n->{probe};
+    $ENV{OVERRIDE_SYSPREF_LibraryName} = $probe_mode eq 'full' ? 'Riverside Library' : '';
+    if ( $probe_mode eq 'bare' ) { $ENV{OVERRIDE_SYSPREF_OPACBaseURL} = '' }
+    else                         { delete $ENV{OVERRIDE_SYSPREF_OPACBaseURL} }
+    probe_fill();
+    return if $real_process_tt;
+    $real_process_tt = \&C4::Letters::_process_tt;
+    no warnings 'redefine';
+    # lent five days ago, so the loan date is never the due date
+    my $issue = \&C4::Circulation::AddIssue;
+    *main::AddIssue = sub {
+        my @a = @_[ 0 .. 4 ];
+        $a[4] //= dt_from_string->subtract( days => 5 ) if $probe_mode;
+        return $issue->(@a);
+    };
+    *C4::Letters::_process_tt = sub {
+        probe_fill();
+        probe_charge() if $probe_mode eq 'full';
+        %probe_prefs = map { $_ => C4::Context->preference($_) // '' } qw( OPACBaseURL LibraryName );
+        return $real_process_tt->(@_);
+    };
+}
+
+sub probe_fill {
+    my %patron = (
+        title => 'Ms', middle_name => 'Ann', preferred_name => 'Jane', othernames => 'Janie', phone => '555 0101', mobile => '555 0102',
+        address => '7 Elm Road', address2 => 'Flat 2', city => 'Riverside', state => 'Northshire', zipcode => '54321',
+        country => 'Exampleland', opacnote => 'Sample note for the reader',
+    );
+    my %library = (
+        branchaddress1 => '1 Main Street', branchaddress2 => 'Floor 2', branchaddress3 => 'Old Quarter', branchcity => 'Riverside',
+        branchstate => 'Northshire', branchzip => '12345', branchcountry => 'Exampleland', branchphone => '+1 555 0100',
+        branchfax => '+1 555 0199', branchemail => 'library@example.org', branchurl => 'https://library.example.org',
+    );
+    my %item = ( itemcallnumber => undef, itemnotes => undef, enumchron => undef, copynumber => undef, location => 'GEN', ccode => 'FIC',
+        materials => undef );
+    my %biblio = ( subtitle => 'a sample subtitle /', seriestitle => 'Sample series ;', part_number => 'Part 2.', part_name => 'The second.',
+        copyrightdate => 1999, author => 'Sample, Author A.,' );
+    my %bibitem = ( isbn => '9780000000002', issn => '0000-0019', publishercode => 'Sample Press,', publicationyear => '1999',
+        editionstatement => '2nd ed.', pages => '200 p. :', place => 'Riverside :' );
+    my $full = $probe_mode eq 'full';
+    my $set  = sub {
+        my ( $table, $where, %v ) = @_;
+        my @c = sort keys %v;
+        $dbh->do( "UPDATE $table SET " . join( ', ', map { "`$_` = ?" } @c ) . " WHERE $where", undef, $full ? @v{@c} : map { undef } @c );
+    };
+    $set->( 'borrowers', q{cardnumber IN ('KNT-0001', 'KNT-0003')}, %patron );
+    $set->( 'branches',  q{branchcode LIKE 'KNTLIB%'}, %library );
+    $set->( 'items', q{barcode LIKE 'KNT-ITEM-%'}, %item );
+    $dbh->do( q{UPDATE items SET itemcallnumber = CONCAT('QA 76 ', barcode), itemnotes = CONCAT('Public note ', barcode),
+        enumchron = CONCAT('v. ', barcode), copynumber = RIGHT(barcode, 1), materials = CONCAT('With a map ', barcode)
+        WHERE barcode LIKE 'KNT-ITEM-%'} ) if $full;
+    my $in = join ',', map { int } @sample_biblios;
+    $set->( 'biblio',      "biblionumber IN ($in)", %biblio );
+    $set->( 'biblioitems', "biblionumber IN ($in)", %bibitem );
+    # each record its own ISBN and author, so a value printed from the wrong record is caught
+    $dbh->do("UPDATE biblio SET author = CONCAT('Sample, Author ', biblionumber, ',') WHERE biblionumber IN ($in)") if $full;
+    $dbh->do("UPDATE biblioitems SET isbn = CONCAT('978000000', biblionumber) WHERE biblionumber IN ($in)")        if $full;
+}
+
+# A fine on every sample loan and a charge on every sample patron, so that a money value is never proved by a zero.
+# Added when the notice is rendered, after Koha has decided what to send.
+sub probe_charge {
+    $dbh->do(
+        q{INSERT INTO accountlines (borrowernumber, itemnumber, issue_id, old_issue_id, date, amount, amountoutstanding, debit_type_code, interface, branchcode, status)
+          SELECT i.borrowernumber, i.itemnumber, i.issue_id, NULL, NOW(), 1 + CAST(RIGHT(t.barcode, 1) AS DECIMAL) / 4, 1 + CAST(RIGHT(t.barcode, 1) AS DECIMAL) / 4,
+                 'OVERDUE', 'cron', 'KNTLIB', 'UNRETURNED'
+          FROM issues i JOIN items t USING (itemnumber)
+          WHERE t.barcode LIKE 'KNT-ITEM-%' AND NOT EXISTS (SELECT 1 FROM accountlines a WHERE a.issue_id = i.issue_id AND a.debit_type_code = 'OVERDUE')}
+    );
+    $dbh->do(
+        q{INSERT INTO accountlines (borrowernumber, date, amount, amountoutstanding, debit_type_code, interface, branchcode)
+          SELECT borrowernumber, NOW(), 3.75, 3.75, 'MANUAL', 'intranet', 'KNTLIB' FROM borrowers b
+          WHERE cardnumber IN ('KNT-0001', 'KNT-0003') AND NOT EXISTS (SELECT 1 FROM accountlines a WHERE a.borrowernumber = b.borrowernumber AND a.amount = 3.75)}
+    );
+}
+
+# What the database holds at that moment, unformatted: the checks format it themselves.
+sub probe_db {
+    my $row  = sub { $dbh->selectrow_hashref( shift, undef, @_ ) };
+    my $one  = sub { scalar $dbh->selectrow_array( shift, undef, @_ ) };
+    my $card = $one->(q{SELECT MAX(cardnumber) FROM borrowers WHERE cardnumber IN ('KNT-0001', 'KNT-0003')});
+    my $b    = $row->(
+        q{SELECT b.borrowernumber, b.cardnumber, b.userid, b.title, b.firstname, b.middle_name, b.preferred_name, b.surname, b.othernames, b.email,
+            b.phone, b.mobile, b.address, b.address2, b.city, b.state, b.zipcode, b.country, b.dateexpiry, b.dateenrolled, b.opacnote,
+            c.description category, l.branchname home_library
+          FROM borrowers b JOIN categories c USING (categorycode) JOIN branches l ON l.branchcode = b.branchcode
+          WHERE b.cardnumber = ?}, $card
+    );
+    my $id = delete $b->{borrowernumber};
+    $b->{checkouts} = $one->( q{SELECT COUNT(*) FROM issues WHERE borrowernumber = ?}, $id );
+    $b->{overdues}  = $one->( q{SELECT COUNT(*) FROM issues WHERE borrowernumber = ? AND date_due < NOW()}, $id );
+    $b->{holds}     = $one->( q{SELECT COUNT(*) FROM reserves WHERE borrowernumber = ?}, $id );
+    $b->{balance}   = $one->( q{SELECT COALESCE(SUM(amountoutstanding), 0) FROM accountlines WHERE borrowernumber = ?}, $id );
+    my %items;
+    for my $i ( @{ $dbh->selectall_arrayref( q{SELECT itemnumber, biblionumber, barcode, itemcallnumber, itemnotes, enumchron, copynumber, materials,
+            homebranch, holdingbranch, itype, location, ccode FROM items WHERE barcode LIKE 'KNT-ITEM-%'}, { Slice => {} } ) } ) {
+        my $bib = $row->( q{SELECT * FROM biblio WHERE biblionumber = ?}, $i->{biblionumber} );
+        my $bi  = $row->( q{SELECT * FROM biblioitems WHERE biblionumber = ?}, $i->{biblionumber} );
+        my $n   = $i->{itemnumber};
+        $items{ $i->{barcode} } = {
+            %$i,
+            itemtype  => $one->( q{SELECT description FROM itemtypes WHERE itemtype = ?}, $i->{itype} ),
+            home      => $one->( q{SELECT branchname FROM branches WHERE branchcode = ?}, $i->{homebranch} ),
+            held      => $one->( q{SELECT branchname FROM branches WHERE branchcode = ?}, $i->{holdingbranch} ),
+            location_text => $one->( q{SELECT COALESCE(lib_opac, lib) FROM authorised_values WHERE category = 'LOC' AND authorised_value = ?}, $i->{location} ),
+            ccode_text    => $one->( q{SELECT COALESCE(lib_opac, lib) FROM authorised_values WHERE category = 'CCODE' AND authorised_value = ?}, $i->{ccode} ),
+            biblio     => { map { $_ => $bib->{$_} } qw( title subtitle author seriestitle part_number part_name copyrightdate ) },
+            biblioitem => { map { $_ => $bi->{$_} } qw( isbn issn publishercode publicationyear editionstatement pages place ) },
+            checkout   => $row->( q{SELECT date_due, issuedate, lastreneweddate, renewals_count, l.branchname library,
+                (SELECT COALESCE(SUM(amountoutstanding), 0) FROM accountlines a WHERE a.issue_id = i.issue_id AND debit_type_code = 'OVERDUE') fine
+                FROM issues i LEFT JOIN branches l USING (branchcode) WHERE itemnumber = ?}, $n ),
+            old_checkout => $row->( q{SELECT date_due, issuedate, returndate, renewals_count, l.branchname library
+                FROM old_issues i LEFT JOIN branches l USING (branchcode) WHERE itemnumber = ? AND borrowernumber = ?}, $n, $id ),
+            hold => $row->( q{SELECT reservedate, waitingdate, expirationdate, l.branchname, l.branchaddress1, l.branchcity, l.branchphone
+                FROM reserves r LEFT JOIN branches l USING (branchcode) WHERE itemnumber = ? AND borrowernumber = ?}, $n, $id ),
+        };
+    }
+    return {
+        patron   => $b,
+        libraries => $dbh->selectall_hashref( q{SELECT branchcode, branchname, branchaddress1, branchaddress2, branchaddress3, branchcity,
+            branchstate, branchzip, branchcountry, branchphone, branchfax, branchemail, branchurl FROM branches WHERE branchcode LIKE 'KNTLIB%'}, 'branchcode' ),
+        items    => \%items,
+        prefs    => { %probe_prefs, dateformat => C4::Context->preference('dateformat'), symbol => $one->(q{SELECT symbol FROM currency WHERE active = 1}) },
+        today    => dt_from_string->ymd,
+    };
 }
