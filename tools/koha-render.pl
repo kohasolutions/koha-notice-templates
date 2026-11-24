@@ -91,7 +91,7 @@ my @leaked = grep { $_ } (
     Koha::Patrons->search( { cardnumber => { -like => 'KNT-%' } } )->count ? 'patrons KNT-*' : undef,
     Koha::Items->search( { barcode => { -like => 'KNT-ITEM-%' } } )->count ? 'items KNT-ITEM-*' : undef,
     @committed                 ? "a committed transaction (@committed)"                        : undef,
-    fingerprint() ne $before   ? 'a change in letter, overduerules, message_queue or accountlines' : undef,
+    fingerprint() ne $before   ? 'a change in letter, overduerules, message_queue, accountlines or borrower_password_recovery' : undef,
 );
 
 my $out = encode_json( { koha => Koha::version(), results => \@results, leaked => \@leaked } );
@@ -230,6 +230,9 @@ sub run_scenario {
     return scenario_advance_digest( $n, $s )       if $sc eq 'predue_digest' || $sc eq 'due_digest';
     return scenario_hold_digest( $n, $s )          if $sc eq 'hold_digest';
     return scenario_auto_renewals_digest( $n, $s ) if $sc eq 'auto_renewals_digest';
+    return scenario_welcome( $n, $s )           if $sc eq 'welcome';
+    return scenario_membership_expiry( $n, $s ) if $sc eq 'membership_expiry';
+    return scenario_password_reset( $n, $s )    if $sc eq 'password_reset';
     die "unknown scenario '$sc'\n";
 }
 
@@ -238,7 +241,8 @@ sub fingerprint {
         q{SELECT (SELECT CONCAT(COUNT(*), '/', SUM(CRC32(CONCAT_WS('~', code, title, content, is_html)))) FROM letter),
                  (SELECT CONCAT(COUNT(*), '/', MAX(overduerules_id)) FROM overduerules),
                  (SELECT COUNT(*) FROM overduerules_transport_types),
-                 (SELECT COUNT(*) FROM message_queue), (SELECT COUNT(*) FROM accountlines)}
+                 (SELECT COUNT(*) FROM message_queue), (SELECT COUNT(*) FROM accountlines),
+                 (SELECT COUNT(*) FROM borrower_password_recovery)}
     );
 }
 
@@ -675,5 +679,82 @@ sub scenario_auto_renewals_digest {
     } else {
         $out->{must} = [ map { shown_date( $_->date_due ) } grep { ( $_->auto_renew_error // '' ) ne 'auto_too_soon' } @loans ];
     }
+
+# ── membership notices ───────────────────────────────────────────────────────────────────────────────────────────
+# WELCOME by email: Koha's own patron import creates the patron and queues the notice. The print version exists in
+# one place only, the patron's Notices tab (members/notices.pl), a CGI script that needs a logged-in browser: its
+# call is repeated here.
+sub scenario_welcome {
+    my ( $n, $s ) = @_;
+    require Koha::Patrons::Import;
+    reader_address( $s->{patron} );
+    my %new = (
+        cardnumber => 'KNT-0003',
+        userid     => $n->{case} eq 'card_as_user_name' ? 'KNT-0003' : 'knt-welcome',
+        firstname  => 'Jane',
+        surname    => 'Reader',
+        email      => $n->{transport} eq 'print' ? '' : 'jane.reader@example.org',
+        branchcode => 'KNTLIB',
+        categorycode => $s->{patron}->categorycode,
+        address    => '7 Elm Road',
+        city       => 'Riverside',
+        zipcode    => '54321',
+        dateexpiry => dt_from_string->add( years => 1 )->ymd,
+    );
+    my @columns = sort keys %new;
+    my $csv     = join( ',', @columns ) . "\n" . join( ',', map { qq{"$_"} } @new{@columns} ) . "\n";
+    open my $file, '<', \$csv or die "cannot read the sample patron file: $!\n";
+    my $done = Koha::Patrons::Import->new->import_patrons(
+        { file => $file, matchpoint => 'cardnumber', send_welcome => 1, defaults => {} } );
+    my $patron = Koha::Patrons->find( { cardnumber => 'KNT-0003' } ) or die "Koha did not import the sample patron\n";
+    if ( $n->{transport} eq 'print' ) {
+        my $print = C4::Letters::GetPreparedLetter(
+            module      => 'members',
+            letter_code => 'WELCOME',
+            branchcode  => $patron->branchcode,
+            lang        => $patron->lang || 'default',
+            tables      => { branches => $patron->branchcode, borrowers => $patron->borrowernumber },
+            want_librarian         => 1,
+            message_transport_type => 'print',
+        );
+        C4::Letters::EnqueueLetter(
+            { letter => $print, borrowernumber => $patron->id, message_transport_type => 'print' } );
+    }
+    my $out = queued( $patron, 'WELCOME', $n->{transport} );
+    $out->{must} = [ shown_date( $patron->dateexpiry ) ];
+    return $out;
+}
+
+# Koha's own membership_expiry.pl, limited to the sample library.
+sub scenario_membership_expiry {
+    my ( $n, $s ) = @_;
+    local $ENV{OVERRIDE_SYSPREF_MembershipExpiryDaysNotice} = 14;    # without it the script exits, and we with it
+    reader_address( $s->{patron} );
+    $s->{patron}->dateexpiry( dt_from_string->add( days => 14 )->ymd )->store;
+    wants_or_print( $s->{patron}, 'Patron_Expiry', $n->{transport} );
+    run_cron( 'membership_expiry.pl', '-c', '--branch', 'KNTLIB' );
+    my $out = queued( $s->{patron}, 'MEMBERSHIP_EXPIRY', $n->{transport} );
+    $out->{must} = [ shown_date( $s->{patron}->dateexpiry ) ];
+    return $out;
+}
+
+# Koha's own SendPasswordRecoveryEmail. It sends the message at once, so the sender is replaced: nothing leaves Koha.
+# The key is checked against Koha's table, then replaced by a word: no key is ever printed or saved.
+sub scenario_password_reset {
+    my ( $n, $s ) = @_;
+    require Koha::AuthUtils;
+    require Koha::Patron::Password::Recovery;
+    local $ENV{OVERRIDE_SYSPREF_LibraryName} = $n->{case} eq 'library_name_set' ? 'Riverside Library' : '';
+    my $sent = 0;
+    no warnings 'redefine';
+    local *C4::Letters::SendQueuedMessages = sub { $sent++; return 1 };
+    Koha::Patron::Password::Recovery::SendPasswordRecoveryEmail( $s->{patron}, $s->{patron}->email, 0 );
+    die "Koha did not try to send the message\n" unless $sent;
+    my ($key) = $dbh->selectrow_array( q{SELECT uuid FROM borrower_password_recovery WHERE borrowernumber = ?},
+        undef, $s->{patron}->borrowernumber );
+    my $out = queued( $s->{patron}, 'PASSWORD_RESET', 'email' );
+    $out->{content} =~ s/\Q$key\E/SAMPLE-KEY/g;
+    $out->{must} = [ C4::Context->preference('OPACBaseURL') . '/cgi-bin/koha/opac-password-recovery.pl?uniqueKey=SAMPLE-KEY' ];
+    die "a key that is not in Koha's table is in the message\n" if $out->{content} =~ /uniqueKey=(?!SAMPLE-KEY)\S/;
     return $out;
 }

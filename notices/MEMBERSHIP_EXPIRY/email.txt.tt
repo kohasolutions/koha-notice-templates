@@ -1,0 +1,25 @@
+[%-
+  # ── Your library: change the values on these two lines only. ───────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+-%]
+[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]
+
+Your library membership ends on [% borrower.dateexpiry | $KohaDates %]. To keep borrowing after that date, please renew it.
+
+* Card number: [% borrower.cardnumber %]
+
+[% IF branch.branchphone || branch.branchemail -%]
+Questions? Contact the library:
+[% IF branch.branchphone -%]
+  Phone [% branch.branchphone %]
+[% END -%]
+[% IF branch.branchemail -%]
+  Email [% branch.branchemail %]
+[% END -%]
+
+[% END -%]
+Thank you,
+[% library_name %]
+[% IF footer_note %][% footer_note %][% END %]

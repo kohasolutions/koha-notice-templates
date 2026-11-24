@@ -1,0 +1,34 @@
+{
+  "code": "PASSWORD_RESET",
+  "module": "members",
+  "name": "Online password reset",
+  "menu": "Patrons (members)",
+  "subject": "Set a new password for your library account",
+  "scenario": "password_reset",
+  "digest": false,
+  "about": "Sent at once, by email only, when a patron asks for a new password in the OPAC (system preference OpacResetPassword). Koha gives this notice the user name and the link, but neither the patron nor the library, so the greeting has no name and the library's name comes from the system preference LibraryName or from the top block. The link starts with the system preference OPACBaseURL: without it the link does not work.",
+  "expect": [
+    "knt-sample-reader",
+    "2 days"
+  ],
+  "cases": [
+    {
+      "name": "library_name_set",
+      "expect": [
+        "Riverside Library"
+      ],
+      "absent": [
+        "Your library"
+      ]
+    },
+    {
+      "name": "library_name_empty",
+      "expect": [
+        "Your library"
+      ],
+      "absent": [
+        "Riverside"
+      ]
+    }
+  ]
+}

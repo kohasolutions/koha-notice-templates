@@ -14,3 +14,6 @@ a library edits) is a major version: it can break a copy a library has already c
   rolled-back transaction. AUTO_RENEWALS is tested in 13 situations: 3 renewed, 9 not renewed, 1 unknown reason.
 - PREDUEDGST, DUEDGST, HOLDDGST and AUTO_RENEWALS_DGST (email HTML, email text, SMS), for patrons who chose "Digests
   only", each produced by Koha's own digest code with one item and with several.
+- WELCOME (email HTML, email text, print), MEMBERSHIP_EXPIRY (also SMS) and PASSWORD_RESET (email HTML, email text),
+  through Koha's patron import, membership_expiry.pl and password recovery; nothing is sent and no key is kept.
+- `tools/install.mjs`: dry run, install with a backup, restore; `tools/e2e-install.mjs` proves it on a test Koha.

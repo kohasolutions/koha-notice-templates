@@ -1,0 +1,39 @@
+{
+  "code": "WELCOME",
+  "module": "members",
+  "name": "Welcome",
+  "menu": "Patrons (members)",
+  "subject": "Welcome to [% branch.branchname %]",
+  "scenario": "welcome",
+  "digest": false,
+  "print_as": "print",
+  "about": "Sent to a new patron when the system preference AutoEmailNewUser is on, when a patron import is told to send it, or from the patron's Notices tab. The print version is used only from the Notices tab, for a patron with no email address. Koha does not send it as an SMS.",
+  "expect": [
+    "Dear Jane",
+    "Riverside Library",
+    "KNT-0003",
+    "+1 555 0100",
+    "library@example.org"
+  ],
+  "expectByFile": {
+    "print.html.tt": [
+      "7 Elm Road",
+      "Riverside 54321"
+    ]
+  },
+  "cases": [
+    {
+      "name": "own_user_name",
+      "expect": [
+        "knt-welcome"
+      ]
+    },
+    {
+      "name": "card_as_user_name",
+      "absent": [
+        "User name",
+        "knt-welcome"
+      ]
+    }
+  ]
+}
