@@ -32,6 +32,7 @@ a real Koha checkout, check-in or slip print before it is published.
 1. In Koha, open *Tools → Notices and slips*, find the code, and **copy the current text somewhere safe** first.
 2. Paste the template into the matching tab (Email, SMS or Print). For an email, tick *HTML message* when you use the
    `.html.tt` file and leave it unticked for the `.txt.tt` one.
+   `ISSUESLIP` goes in the Email tab too, with *HTML message* ticked: Koha reads the slip it prints from there.
 3. Change only the values in the **"Your library"** block at the top: the name, logo address, colour and footer line.
 
 CHECKOUT, CHECKIN and HOLDDGST keep Koha's two `----` lines: Koha repeats the part between them once per item, so one visit
