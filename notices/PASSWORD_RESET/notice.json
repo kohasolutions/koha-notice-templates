@@ -23,6 +23,7 @@
     },
     {
       "name": "library_name_empty",
+      "prints_name": "Your library",
       "expect": [
         "Your library"
       ],

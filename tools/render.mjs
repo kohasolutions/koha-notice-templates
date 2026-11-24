@@ -53,6 +53,7 @@ export function casesOf(notice) {
     ...notice,
     scenario: c.scenario ?? notice.scenario,
     case: c.name,
+    prints_name: c.prints_name, // the library name Koha prints here when none is typed (TOKENS.md)
     plain: i === 0, // the first case's output keeps the plain file name
     expect: [...(notice.expect ?? []), ...(c.expect ?? [])],
     expect_sms: [...(notice.expect_sms ?? []), ...(c.expect_sms ?? [])],
@@ -107,7 +108,7 @@ export function checkOutput(notice, file, out) {
   return problems
 }
 
-function loadNotices(only) {
+export function loadNotices(only) {
   const dir = join(ROOT, 'notices')
   return readdirSync(dir)
     .filter((c) => !only.length || only.includes(c))
@@ -119,7 +120,7 @@ function loadNotices(only) {
     })
 }
 
-function runKoha(jobs) {
+export function runKoha(jobs) {
   const script = join(ROOT, 'tools', 'koha-render.pl')
   const remote = `/tmp/koha-render-${process.pid}.pl` // its own name: two runs may share a container
   execFileSync('docker', ['cp', script, `${CONTAINER}:${remote}`])

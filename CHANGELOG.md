@@ -17,3 +17,4 @@ a library edits) is a major version: it can break a copy a library has already c
 - WELCOME (email HTML, email text, print), MEMBERSHIP_EXPIRY (also SMS) and PASSWORD_RESET (email HTML, email text),
   through Koha's patron import, membership_expiry.pl and password recovery; nothing is sent and no key is kept.
 - `tools/install.mjs`: dry run, install with a backup, restore; `tools/e2e-install.mjs` proves it on a test Koha.
+- `tools/branding.mjs` and `tools/tokens.mjs`: one tested way to put a library's values into a template (TOKENS.md).
