@@ -12,3 +12,4 @@ a library edits) is a major version: it can break a copy a library has already c
 - HOLD, HOLD_REMINDER (email HTML, email text, SMS, print) and AUTO_RENEWALS (email HTML, email text, SMS). Waiting
   holds are made with Koha's own code; the reminder and the renewals come from Koha's own cron scripts, run inside the
   rolled-back transaction. AUTO_RENEWALS is tested in 13 situations: 3 renewed, 9 not renewed, 1 unknown reason.
+- `tools/branding.mjs` and `tools/tokens.mjs`: one tested way to put a library's values into a template (TOKENS.md).

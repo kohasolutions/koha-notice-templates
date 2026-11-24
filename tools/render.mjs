@@ -104,7 +104,7 @@ export function checkOutput(notice, file, out) {
   return problems
 }
 
-function loadNotices(only) {
+export function loadNotices(only) {
   const dir = join(ROOT, 'notices')
   return readdirSync(dir)
     .filter((c) => !only.length || only.includes(c))
@@ -116,7 +116,7 @@ function loadNotices(only) {
     })
 }
 
-function runKoha(jobs) {
+export function runKoha(jobs) {
   const script = join(ROOT, 'tools', 'koha-render.pl')
   const remote = `/tmp/koha-render-${process.pid}.pl` // its own name: two runs may share a container
   execFileSync('docker', ['cp', script, `${CONTAINER}:${remote}`])
