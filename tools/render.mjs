@@ -89,12 +89,13 @@ function loadNotices(only) {
 
 function runKoha(jobs) {
   const script = join(ROOT, 'tools', 'koha-render.pl')
-  execFileSync('docker', ['cp', script, `${CONTAINER}:/tmp/koha-render.pl`])
+  const remote = `/tmp/koha-render-${process.pid}.pl` // its own name: two runs may share a container
+  execFileSync('docker', ['cp', script, `${CONTAINER}:${remote}`])
   const out = execFileSync(
     'docker',
     // koha-shell starts a new login shell as the instance user, which drops the caller's environment: the variable
     // must be set INSIDE the command. koha-render.pl refuses to run without it.
-    ['exec', '-i', CONTAINER, 'koha-shell', INSTANCE, '-c', 'cd /tmp && KOHA_TESTING=1 perl /tmp/koha-render.pl'],
+    ['exec', '-i', CONTAINER, 'koha-shell', INSTANCE, '-c', `cd /tmp && KOHA_TESTING=1 perl ${remote}`],
     { input: JSON.stringify({ notices: jobs }), maxBuffer: 64 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] },
   ).toString('utf8')
   return JSON.parse(out.slice(out.indexOf('{')))

@@ -39,6 +39,11 @@ my $input  = decode_json( do { local $/; my $s = <STDIN>; utf8::encode($s); $s }
 my $schema = Koha::Database->new->schema;
 my $dbh    = C4::Context->dbh;
 
+# One run at a time: every run uses the same sample ids. A named lock does not touch the transaction (unlike LOCK
+# TABLES) and goes away with the connection.
+my ($got_lock) = $dbh->selectrow_array(q{SELECT GET_LOCK('koha-notice-templates', 300)});
+die "another run has been using this Koha for five minutes: try again later\n" unless $got_lock;
+
 # Sample books: the first three records that have a title, an author and an item type, by biblionumber.
 my @sample_biblios = @{
     $dbh->selectcol_arrayref(
