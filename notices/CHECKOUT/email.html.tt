@@ -1,0 +1,24 @@
+[%-
+  # ── Your library: change the values on these four lines only. ──────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  logo_url     = "";                 # full https:// address of your logo, about 200 x 60 pixels; "" = no logo
+  brand_colour = "#1f4e79";          # your colour, as #rrggbb
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+-%]
+<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1a1a1a;">
+[% IF logo_url %]<img src="[% logo_url %]" alt="[% library_name %]" style="display:block;max-width:220px;max-height:60px;margin:0 0 12px;">[% END %]
+<div style="border-top:4px solid [% brand_colour %];padding-top:12px;">
+<p style="margin:0 0 16px;font-size:20px;font-weight:bold;color:[% brand_colour %];">[% library_name %]</p>
+<p style="margin:0 0 12px;">[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]</p>
+<p style="margin:0 0 12px;">You borrowed these items. Please return or renew them by the date shown.</p>
+<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">
+----
+<tr><td style="padding:10px 0;border-bottom:1px solid #dddddd;"><strong>[% item.biblio.title | $Remove_MARC_punctuation | trim %]</strong>[% IF item.biblio.author %]<br>[% item.biblio.author | $Remove_MARC_punctuation | trim %][% END %]<br><span style="color:#555555;font-size:14px;">Due <strong>[% checkout.date_due | $KohaDates %]</strong> · Barcode [% item.barcode %]</span></td></tr>
+----
+</table>
+[% IF Koha.Preference('OPACBaseURL') %]<p style="margin:0 0 12px;">See your loans and renew them online: <a href="[% Koha.Preference('OPACBaseURL') %]/cgi-bin/koha/opac-user.pl" style="color:[% brand_colour %];">your library account</a>.</p>[% END %]
+<p style="margin:0 0 12px;">Thank you,<br>[% library_name %]</p>
+[% IF footer_note %]<p style="margin:0;font-size:13px;color:#555555;">[% footer_note %]</p>[% END %]
+</div>
+</div>

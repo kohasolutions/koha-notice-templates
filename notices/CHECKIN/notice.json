@@ -1,0 +1,14 @@
+{
+  "code": "CHECKIN",
+  "module": "circulation",
+  "name": "Check-in receipt",
+  "menu": "Circulation",
+  "subject": "Items you returned to [% branch.branchname %]",
+  "scenario": "checkin",
+  "digest": true,
+  "about": "Sent when items are checked in for a patron who chose 'Item check-in' in their messaging preferences. Koha puts every item from one visit into one message: the part between the two ---- lines is repeated once per item.",
+  "expect": [
+    "KNT-ITEM-1",
+    "KNT-ITEM-2"
+  ]
+}

@@ -1,0 +1,22 @@
+[%-
+  # ── Your library: change the values on these two lines only. ───────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+-%]
+[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]
+
+We received these items back at [% library_name %]. Thank you for returning them.
+----
+
+* [% item.biblio.title | $Remove_MARC_punctuation | trim %][% IF item.biblio.author %], [% item.biblio.author | $Remove_MARC_punctuation | trim %][% END %]
+  Returned [% old_checkout.returndate | $KohaDates %] · Barcode [% item.barcode %]
+----
+
+[% IF Koha.Preference('OPACBaseURL') -%]
+See your loans and renew them online: [% Koha.Preference('OPACBaseURL') %]/cgi-bin/koha/opac-user.pl
+
+[% END -%]
+Thank you,
+[% library_name %]
+[% IF footer_note %][% footer_note %][% END %]

@@ -1,0 +1,28 @@
+[%-
+  # ── Your library: change the values on these four lines only. ──────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  logo_url     = "";                 # full https:// address of your logo, about 200 x 60 pixels; "" = no logo
+  brand_colour = "#1f4e79";          # your colour, as #rrggbb
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+-%]
+<div style="width:72mm;max-width:100%;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.35;color:#000000;">
+[% IF logo_url %]<img src="[% logo_url %]" alt="[% library_name %]" style="display:block;max-width:60mm;max-height:18mm;margin:0 auto 4px;">[% END %]
+<p style="margin:0;font-size:15px;font-weight:bold;text-align:center;">[% library_name %]</p>
+[% IF branch.branchphone %]<p style="margin:0;text-align:center;">[% branch.branchphone %]</p>[% END %]
+<p style="margin:6px 0 0;">[% borrower.firstname %] [% borrower.surname %]<br>Card [% borrower.cardnumber %]<br>[% today | $KohaDates with_hours => 1 %]</p>
+[% IF checkouts.count %]
+<p style="margin:8px 0 2px;font-weight:bold;border-bottom:1px solid #000000;">Checked out ([% checkouts.count %])</p>
+[% FOREACH checkout IN checkouts %]
+<p style="margin:0 0 4px;">[% checkout.item.biblio.title | $Remove_MARC_punctuation | trim %]<br>[% checkout.item.barcode %] · due <strong>[% checkout.date_due | $KohaDates %]</strong></p>
+[% END %]
+[% END %]
+[% IF overdues.count %]
+<p style="margin:8px 0 2px;font-weight:bold;border-bottom:1px solid #000000;">Overdue ([% overdues.count %])</p>
+[% FOREACH overdue IN overdues %]
+<p style="margin:0 0 4px;">[% overdue.item.biblio.title | $Remove_MARC_punctuation | trim %]<br>[% overdue.item.barcode %] · was due <strong>[% overdue.date_due | $KohaDates %]</strong></p>
+[% END %]
+[% END %]
+<p style="margin:8px 0 0;text-align:center;">Thank you for visiting.</p>
+[% IF footer_note %]<p style="margin:2px 0 0;text-align:center;">[% footer_note %]</p>[% END %]
+</div>
