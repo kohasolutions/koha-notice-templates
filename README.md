@@ -18,6 +18,9 @@ a real Koha checkout, check-in or slip print before it is published.
 | `HOLD` | Holds | hold ready for pickup, with the deadline and the pickup library | ✓ | ✓ | ✓ | ✓ |
 | `HOLD_REMINDER` | Holds | holds still waiting, one message per patron and library | ✓ | ✓ | ✓ | ✓ |
 | `AUTO_RENEWALS` | Circulation | automatic renewal result: renewed, or not renewed and why | ✓ | ✓ | ✓ | |
+| `WELCOME` | Patrons (members) | new member: card number, user name, how to reach the account | ✓ | ✓ | | ✓ |
+| `MEMBERSHIP_EXPIRY` | Patrons (members) | membership ending soon | ✓ | ✓ | ✓ | ✓ |
+| `PASSWORD_RESET` | Patrons (members) | link to set a new password (asked for in the OPAC) | ✓ | ✓ | | |
 | `ISSUESLIP` | Circulation | checkout slip for an 80 mm receipt printer | | | | ✓ |
 
 ## Using one
@@ -38,6 +41,25 @@ in this set.
 A patron who ticked *Digests only* for holds or automatic renewals gets Koha's `HOLDDGST` or `AUTO_RENEWALS_DGST`
 instead. Those two are not in this set: such a patron keeps Koha's own wording.
 
+`PASSWORD_RESET`: Koha does not tell this notice which library or patron it is for. Type your library's name in the top
+block (or fill the system preference `LibraryName`), and set `OPACBaseURL`: the link starts with it. The staff-sent
+`STAFF_PASSWORD_RESET` (link valid 5 days) and `MEMBERSHIP_RENEWED` are not in this set.
+
+## Installing with the script
+
+On the Koha server (or with `KOHA_CONTAINER` for a Koha in Docker), instead of copying and pasting:
+
+```
+KOHA_INSTANCE=library node tools/install.mjs CHECKOUT ODUE --library-name "Riverside Library" --colour "#1f4e79"
+KOHA_INSTANCE=library node tools/install.mjs CHECKOUT ODUE --library-name "Riverside Library" --colour "#1f4e79" --apply
+KOHA_INSTANCE=library node tools/install.mjs restore backups/<date>.json --apply
+```
+
+Without `--apply` it only shows the changes. It saves the originals first, writes all of them or none, and refuses a
+notice somebody has changed unless you add `--force`. The values in your top block are kept when you install a newer
+version. `--library-name` changes the text, not the subject line, which uses the branch name in Koha. It needs a user
+who may `sudo koha-shell`; hosted libraries copy and paste instead.
+
 ## How the notices are tested
 
 `node tools/render.mjs` runs every template inside a real Koha (a
@@ -45,6 +67,8 @@ instead. Those two are not in this set: such a patron keeps Koha's own wording.
 notice, checks items out and in with Koha's own code, prints the slip or runs Koha's own `advance_notices.pl` / `overdue_notices.pl`
 inside the same transaction, reads the message Koha queued, and rolls
 everything back. It fails on a Koha error, a value that printed empty, or a digest that is not one message.
+`node tools/e2e-install.mjs` (test Koha only) installs notices, checks two items out to a patron made for it, reads the
+message, restores, and compares every table of the database with how it was.
 `node tools/lint.mjs` checks the layout and the Template Toolkit syntax in CI.
 
 ## Licence

@@ -1,0 +1,21 @@
+[%-
+  # ── Your library: change the values on these four lines only. ──────────────────────────────────────────
+  USE Koha;
+  library_name = Koha.Preference('LibraryName') || "Your library";  # Koha does not say which library: type your name in quotes
+  logo_url     = "";                 # full https:// address of your logo, about 200 x 60 pixels; "" = no logo
+  brand_colour = "#1f4e79";          # your colour, as #rrggbb
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+-%]
+<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1a1a1a;">
+[% IF logo_url %]<img src="[% logo_url %]" alt="[% library_name %]" style="display:block;max-width:220px;max-height:60px;margin:0 0 12px;">[% END %]
+<div style="border-top:4px solid [% brand_colour %];padding-top:12px;">
+<p style="margin:0 0 16px;font-size:20px;font-weight:bold;color:[% brand_colour %];">[% library_name %]</p>
+<p style="margin:0 0 12px;">Hello,</p>
+<p style="margin:0 0 12px;">We received a request to set a new password for the library account <strong>[% user %]</strong>.</p>
+<p style="margin:0 0 16px;"><a href="[% passwordreseturl %]" style="display:inline-block;padding:12px 20px;background:[% brand_colour %];color:#ffffff;text-decoration:none;font-weight:bold;">Set a new password</a></p>
+<p style="margin:0 0 12px;">If the button does not work, copy this address into your browser:<br><span style="word-break:break-all;">[% passwordreseturl %]</span></p>
+<p style="margin:0 0 12px;">The link works for 2 days. If you did not ask for this, ignore this message: your password stays as it is.</p>
+<p style="margin:0 0 12px;">Thank you,<br>[% library_name %]</p>
+[% IF footer_note %]<p style="margin:0;font-size:13px;color:#555555;">[% footer_note %]</p>[% END %]
+</div>
+</div>

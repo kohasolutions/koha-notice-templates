@@ -1,0 +1,20 @@
+[%-
+  # ── Your library: change the values on these four lines only. ──────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  logo_url     = "";                 # full https:// address of your logo, about 200 x 60 pixels; "" = no logo
+  brand_colour = "#1f4e79";          # your colour, as #rrggbb
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+-%]
+<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1a1a1a;">
+[% IF logo_url %]<img src="[% logo_url %]" alt="[% library_name %]" style="display:block;max-width:220px;max-height:60px;margin:0 0 12px;">[% END %]
+<div style="border-top:4px solid [% brand_colour %];padding-top:12px;">
+<p style="margin:0 0 16px;font-size:20px;font-weight:bold;color:[% brand_colour %];">[% library_name %]</p>
+<p style="margin:0 0 12px;">[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]</p>
+<p style="margin:0 0 12px;">Your library membership ends on <strong>[% borrower.dateexpiry | $KohaDates %]</strong>. To keep borrowing after that date, please renew it.</p>
+<p style="margin:0 0 16px;">Card number <strong>[% borrower.cardnumber %]</strong></p>
+[% IF branch.branchphone || branch.branchemail %]<p style="margin:0 0 12px;">Questions? Contact the library:[% IF branch.branchphone %]<br>Phone [% branch.branchphone %][% END %][% IF branch.branchemail %]<br>Email [% branch.branchemail %][% END %]</p>[% END %]
+<p style="margin:0 0 12px;">Thank you,<br>[% library_name %]</p>
+[% IF footer_note %]<p style="margin:0;font-size:13px;color:#555555;">[% footer_note %]</p>[% END %]
+</div>
+</div>

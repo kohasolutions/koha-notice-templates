@@ -1,0 +1,17 @@
+[%-
+  # ── Your library: change the values on these two lines only. ───────────────────────────────────────────
+  USE Koha;
+  library_name = Koha.Preference('LibraryName') || "Your library";  # Koha does not say which library: type your name in quotes
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+-%]
+Hello,
+
+We received a request to set a new password for the library account [% user %]. Open this address to choose one:
+
+[% passwordreseturl %]
+
+The link works for 2 days. If you did not ask for this, ignore this message: your password stays as it is.
+
+Thank you,
+[% library_name %]
+[% IF footer_note %][% footer_note %][% END %]

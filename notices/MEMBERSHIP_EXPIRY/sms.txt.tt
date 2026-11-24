@@ -1,0 +1,5 @@
+[%-
+  # ── Your library: change the value on this line only. ──────────────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+-%]
+[% library_name %]: your membership ends on [% borrower.dateexpiry | $KohaDates %]. Please renew it to keep borrowing.

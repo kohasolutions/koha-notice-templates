@@ -1,0 +1,25 @@
+{
+  "code": "MEMBERSHIP_EXPIRY",
+  "module": "members",
+  "name": "Membership ending soon",
+  "menu": "Patrons (members)",
+  "subject": "Your membership of [% branch.branchname %] ends soon",
+  "scenario": "membership_expiry",
+  "digest": false,
+  "print_as": "print",
+  "about": "Sent by the cron script misc/cronjobs/membership_expiry.pl, MembershipExpiryDaysNotice days before the membership ends, to a patron who chose 'Patron expiry' in their messaging preferences (or whose category makes it compulsory). Koha prints it when the patron has no address for the way they chose.",
+  "expect": [
+    "Dear Jane",
+    "Riverside Library",
+    "KNT-0001",
+    "+1 555 0100"
+  ],
+  "expectByFile": {
+    "sms.txt.tt": [
+      "Riverside Library: your membership ends on"
+    ],
+    "print.html.tt": [
+      "7 Elm Road"
+    ]
+  }
+}
