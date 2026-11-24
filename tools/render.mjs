@@ -46,6 +46,23 @@ export function unmark(s) {
   return s.split(OPEN).join('').split(CLOSE).join('')
 }
 
+/** One notice, several situations (with a fine, without one…): each case is the notice plus its own expectations. */
+export function casesOf(notice) {
+  if (!notice.cases?.length) return [{ ...notice, case: null }]
+  return notice.cases.map((c, i) => ({
+    ...notice,
+    scenario: c.scenario,
+    case: i === 0 ? null : c.name,
+    expect: [...(notice.expect ?? []), ...(c.expect ?? [])],
+    expect_sms: [...(notice.expect_sms ?? []), ...(c.expect_sms ?? [])],
+    absent: [...(notice.absent ?? []), ...(c.absent ?? [])],
+    counts: c.counts ?? {},
+  }))
+}
+
+/** "{DUE}" is the due date Koha printed; "a|b" passes when either is there (the HTML and the text form). */
+const has = (text, want, due) => want.replace('{DUE}', due ?? '{DUE}').split('|').some((w) => text.includes(w))
+
 export function checkOutput(notice, file, out) {
   const problems = []
   const content = out.content ?? ''
@@ -60,9 +77,13 @@ export function checkOutput(notice, file, out) {
     // an SMS carries no barcodes: one "- title" line per item instead
     const lines = clean.split('\n').filter((l) => l.startsWith('- ')).length
     if (notice.digest && lines !== 2) problems.push(`the SMS lists ${lines} items, expected 2`)
+    for (const e of notice.expect_sms ?? []) if (!has(clean, e, out.due)) problems.push(`expected "${e}" in the SMS`)
   } else {
-    for (const e of notice.expect ?? []) if (!clean.includes(e)) problems.push(`expected "${e}" in the output`)
+    for (const e of notice.expect ?? []) if (!has(clean, e, out.due)) problems.push(`expected "${e}" in the output`)
+    for (const [t, n] of Object.entries(notice.counts ?? {}))
+      if (clean.split(t).length - 1 !== n) problems.push(`"${t}" appears ${clean.split(t).length - 1} times, expected ${n}`)
   }
+  for (const a of notice.absent ?? []) if (clean.includes(a)) problems.push(`"${a}" must not be in the output`)
   if (notice.digest) {
     // One message for the visit: the greeting (header) once, and the footer once, whatever the item count.
     const count = (s) => clean.split(s).length - 1
@@ -96,7 +117,7 @@ function runKoha(jobs) {
     // koha-shell starts a new login shell as the instance user, which drops the caller's environment: the variable
     // must be set INSIDE the command. koha-render.pl refuses to run without it.
     ['exec', '-i', CONTAINER, 'koha-shell', INSTANCE, '-c', `cd /tmp && KOHA_TESTING=1 perl ${remote}`],
-    { input: JSON.stringify({ notices: jobs }), maxBuffer: 64 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] },
+    { input: JSON.stringify({ notices: jobs.map(({ notice, ...j }) => j) }), maxBuffer: 64 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] },
   ).toString('utf8')
   return JSON.parse(out.slice(out.indexOf('{')))
 }
@@ -106,7 +127,7 @@ async function main() {
   const notices = loadNotices(only)
   if (!notices.length) throw new Error(`no notices match ${only.join(' ')}`)
   const jobs = []
-  for (const n of notices)
+  for (const n of notices.flatMap(casesOf))
     for (const f of n.files)
       jobs.push({
         code: n.code,
@@ -117,6 +138,8 @@ async function main() {
         title: markValues(n.subject),
         content: markValues(readFileSync(join(n.dir, f), 'utf8')),
         scenario: n.scenario,
+        print_as: n.print_as,
+        notice: n,
       })
   const res = runKoha(jobs)
   if (res.leaked?.length) {
@@ -127,18 +150,19 @@ async function main() {
   const summary = []
   res.results.forEach((r, i) => {
     const job = jobs[i]
-    const notice = notices.find((n) => n.code === job.code)
+    const notice = job.notice
+    const base = job.file.replace(/\.tt$/, '').replace(/\.(\w+)$/, notice.case ? `.${notice.case}.$1` : '.$1')
     const problems = r.ok ? checkOutput(notice, job.file, r) : [`Koha: ${r.error}`]
     const outDir = join(ROOT, 'out', job.code)
     mkdirSync(outDir, { recursive: true })
     if (r.ok) {
-      writeFileSync(join(outDir, job.file.replace(/\.tt$/, '')), unmark(r.content))
-      writeFileSync(join(outDir, job.file.replace(/\.tt$/, '.subject.txt')), unmark(r.subject ?? '') + '\n')
+      writeFileSync(join(outDir, base), unmark(r.content))
+      writeFileSync(join(outDir, `${base}.subject.txt`), unmark(r.subject ?? '') + '\n')
     }
     const ok = problems.length === 0
     if (!ok) failed++
-    console.log(`${ok ? 'ok  ' : 'FAIL'} ${job.code} ${job.file}${ok ? '' : '\n       ' + problems.join('\n       ')}`)
-    summary.push({ code: job.code, file: job.file, ok, problems, sample: r.sample ?? null })
+    console.log(`${ok ? 'ok  ' : 'FAIL'} ${job.code} ${job.file}${notice.case ? ` (${notice.case})` : ''}${ok ? '' : '\n       ' + problems.join('\n       ')}`)
+    summary.push({ code: job.code, file: job.file, case: notice.case, ok, problems, sample: r.sample ?? null })
   })
   writeFileSync(join(ROOT, 'out', 'results.json'), JSON.stringify({ koha: res.koha, at: new Date().toISOString(), results: summary }, null, 2) + '\n')
   console.log(`\nKoha ${res.koha}: ${summary.length - failed} of ${summary.length} passed`)

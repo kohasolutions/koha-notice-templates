@@ -1,0 +1,66 @@
+{
+  "code": "ODUE",
+  "module": "circulation",
+  "name": "First overdue notice",
+  "menu": "Circulation",
+  "subject": "Overdue library items",
+  "scenario": "overdue1",
+  "digest": false,
+  "about": "The first overdue notice. Sent by overdue_notices.pl when the overdue trigger for the patron's category (Tools → Overdue notice/status triggers) names this code. One message lists every item in that stage. The fines lines appear only when Koha has charged a fine on a listed item, and the restriction line only when the account is restricted.",
+  "print_as": "print",
+  "expect": [
+    "Jane",
+    "KNT-ITEM-1",
+    "KNT-ITEM-2",
+    "{DUE}"
+  ],
+  "expect_sms": [
+    "Riverside Library",
+    "- ",
+    "was due {DUE}"
+  ],
+  "absent": [
+    "KNT-ITEM-3"
+  ],
+  "cases": [
+    {
+      "name": "no-fine",
+      "scenario": "overdue1",
+      "expect": [],
+      "absent": [
+        "Fine so far",
+        "Fines",
+        "restricted"
+      ]
+    },
+    {
+      "name": "fine",
+      "scenario": "overdue1:fine",
+      "expect": [
+        "Fine so far $2.50",
+        "$2.50</strong>.|items: $2.50"
+      ],
+      "expect_sms": [
+        "Fines so far: $2.50"
+      ],
+      "absent": [
+        "restricted",
+        "0.00"
+      ],
+      "counts": {
+        "Fine so far": 1
+      }
+    },
+    {
+      "name": "restricted",
+      "scenario": "overdue1:restricted",
+      "expect": [
+        "account is restricted at the moment"
+      ],
+      "absent": [
+        "Fine so far",
+        "Fines"
+      ]
+    }
+  ]
+}

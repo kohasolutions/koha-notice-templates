@@ -10,6 +10,11 @@ a real Koha checkout, check-in or slip print before it is published.
 |---|---|---|---|---|---|---|
 | `CHECKOUT` | Circulation | receipt for the items borrowed in one visit | ✓ | ✓ | ✓ | |
 | `CHECKIN` | Circulation | receipt for the items returned in one visit | ✓ | ✓ | ✓ | |
+| `PREDUE` | Circulation | item due soon (one message per item) | ✓ | ✓ | ✓ | |
+| `DUE` | Circulation | item due today (one message per item) | ✓ | ✓ | ✓ | |
+| `ODUE` | Circulation | first overdue notice, every item of the stage in one message | ✓ | ✓ | ✓ | ✓ |
+| `ODUE2` | Circulation | second overdue notice, firmer | ✓ | ✓ | ✓ | ✓ |
+| `ODUE3` | Circulation | final overdue notice, firmest | ✓ | ✓ | ✓ | ✓ |
 | `ISSUESLIP` | Circulation | checkout slip for an 80 mm receipt printer | | | | ✓ |
 
 ## Using one
@@ -22,11 +27,17 @@ a real Koha checkout, check-in or slip print before it is published.
 CHECKOUT and CHECKIN keep Koha's two `----` lines: Koha repeats the part between them once per item, so one visit
 sends one message.
 
+Koha ships only `ODUE`: create `ODUE2` and `ODUE3` as new notices, then choose them (and how each is sent) in
+*Tools → Overdue notice/status triggers*. The fines lines appear only when Koha has charged a fine on a listed item.
+Patrons who ticked "Digests only" get `PREDUEDGST` and `DUEDGST` instead of `PREDUE` and `DUE`; those two are not
+in this set.
+
 ## How the notices are tested
 
 `node tools/render.mjs` runs every template inside a real Koha (a
 [koha-testing-docker](https://gitlab.com/koha-community/koha-testing-docker) instance): it saves the template as the
-notice, checks items out and in with Koha's own code (or prints the slip), reads the message Koha queued, and rolls
+notice, checks items out and in with Koha's own code, prints the slip or runs Koha's own `advance_notices.pl` / `overdue_notices.pl`
+inside the same transaction, reads the message Koha queued, and rolls
 everything back. It fails on a Koha error, a value that printed empty, or a digest that is not one message.
 `node tools/lint.mjs` checks the layout and the Template Toolkit syntax in CI.
 

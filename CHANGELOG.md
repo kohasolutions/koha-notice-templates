@@ -7,3 +7,5 @@ a library edits) is a major version: it can break a copy a library has already c
 
 - CHECKOUT, CHECKIN (email HTML, email text, SMS) and ISSUESLIP (80 mm receipt printer), each run through a real
   Koha checkout, check-in or slip print by `tools/render.mjs`.
+- PREDUE, DUE (email HTML, email text, SMS) and ODUE, ODUE2, ODUE3 (also print), each produced by Koha's own
+  advance_notices.pl or overdue_notices.pl. Overdues are tested with no fine, with a fine and with a restricted account.

@@ -1,0 +1,22 @@
+{
+  "code": "DUE",
+  "module": "circulation",
+  "name": "Due today reminder",
+  "menu": "Circulation",
+  "subject": "Due today: [% biblio.title | $Remove_MARC_punctuation | trim %]",
+  "scenario": "due",
+  "digest": false,
+  "about": "Sent by advance_notices.pl on the due date, one message per item, to a patron who chose 'Item due' without 'Digests only'. Patrons who ticked 'Digests only' get DUEDGST instead, which this set does not change.",
+  "expect": [
+    "Jane",
+    "KNT-ITEM-1",
+    "{DUE}"
+  ],
+  "expect_sms": [
+    "Riverside Library",
+    "{DUE}"
+  ],
+  "absent": [
+    "KNT-ITEM-2"
+  ]
+}

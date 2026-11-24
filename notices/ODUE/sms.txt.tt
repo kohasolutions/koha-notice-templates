@@ -1,0 +1,11 @@
+[%-
+  # ── Your library: change the value on this line only. ──────────────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  USE Price;
+-%]
+[%- fines_total = 0; FOREACH overdue IN overdues; fines_total = fines_total + overdue.overdue_fines.total_outstanding; END -%]
+[% library_name %]: overdue items
+[% FOREACH overdue IN overdues %][% IF loop.count <= 2 %]- [% overdue.item.biblio.title | $Remove_MARC_punctuation | trim | truncate(40) %], was due [% overdue.date_due | $KohaDates %]
+[% ELSIF loop.count == 3 %]- and [% loop.size - 2 %] more
+[% END %][% END %][% IF fines_total > 0 %]Fines so far: [% fines_total | $Price with_symbol => 1 %]
+[% END %]Please return or renew them now.

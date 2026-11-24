@@ -8,7 +8,8 @@
 # For every notice, inside ONE database transaction that is always rolled back:
 #   1. a sample patron, library and items are created (so the output never depends on what else is in the database);
 #   2. the notice is saved in Koha's `letter` table as the default for its code and transport;
-#   3. the real event happens through Koha's own code: AddIssue (checkout), AddReturn (check-in), IssueSlip (slip);
+#   3. the real event happens through Koha's own code: AddIssue (checkout), AddReturn (check-in), IssueSlip (slip),
+#      or the real cron script (advance_notices.pl, overdue_notices.pl) run INSIDE this process, see run_cron;
 #   4. the message Koha queued (or the slip it built) is read back.
 # Nothing is left in Koha afterwards. Run inside koha-shell, with KOHA_TESTING=1 so Koha does not LOCK TABLES
 # (which would commit the transaction).
@@ -22,7 +23,9 @@ use C4::Circulation qw(AddIssue AddReturn);
 use C4::Members;
 use C4::Members::Messaging;
 use Koha::Database;
-use Koha::DateUtils qw(dt_from_string);
+use Koha::DateUtils qw(dt_from_string output_pref);
+use C4::Overdues;
+use Koha::Checkouts;
 use Koha::Patrons;
 use Koha::Items;
 use Koha::Libraries;
@@ -57,7 +60,10 @@ die "Koha has fewer than three records with a title, author and item type\n" unl
 my %attr = map { $_->[1] => $_->[0] }
     @{ $dbh->selectall_arrayref(q{SELECT message_attribute_id, message_name FROM message_attributes}) };
 
-my @results;
+# The notices and the overdue triggers, as a fingerprint: compared again after the last rollback.
+my $before = fingerprint();
+
+my ( @results, @committed );
 for my $n ( @{ $input->{notices} } ) {
     my %r = ( code => $n->{code}, transport => $n->{transport}, ok => 0 );
     $schema->txn_begin;
@@ -71,6 +77,8 @@ for my $n ( @{ $input->{notices} } ) {
         $e =~ s/\s+\z//;
         $r{error} = $e;
     };
+    $r{error} = "Koha ended the transaction: sample data may have been saved", $r{ok} = 0, push @committed, $n->{code}
+        unless $schema->storage->transaction_depth == 1 && !$dbh->{AutoCommit};
     $schema->txn_rollback;
     push @results, \%r;
 }
@@ -80,6 +88,8 @@ my @leaked = grep { $_ } (
     Koha::Libraries->find('KNTLIB')                      ? 'library KNTLIB'   : undef,
     Koha::Patrons->find( { cardnumber => 'KNT-0001' } )  ? 'patron KNT-0001'  : undef,
     Koha::Items->search( { barcode => { -like => 'KNT-ITEM-%' } } )->count ? 'items KNT-ITEM-*' : undef,
+    @committed                 ? "a committed transaction (@committed)"                        : undef,
+    fingerprint() ne $before   ? 'a change in letter, overduerules, message_queue or accountlines' : undef,
 );
 
 my $out = encode_json( { koha => Koha::version(), results => \@results, leaked => \@leaked } );
@@ -150,7 +160,7 @@ sub setup_sample {
 
 sub save_letter {
     my ($n) = @_;
-    my $mtt = $n->{transport} eq 'print' ? 'email' : $n->{transport};    # Koha keeps slips under "email"
+    my $mtt = $n->{transport} eq 'print' ? $n->{print_as} || 'email' : $n->{transport};    # Koha keeps slips under "email"
     $dbh->do(
         q{DELETE FROM letter WHERE module = ? AND code = ? AND branchcode = '' AND message_transport_type = ?
           AND lang = 'default'}, undef, $n->{module}, $n->{code}, $mtt
@@ -210,5 +220,100 @@ sub run_scenario {
         die "IssueSlip returned nothing\n" unless $slip;
         return { subject => $slip->{title}, content => $slip->{content}, content_type => 'text/html' };
     }
+    return run_advance( $n, $patron, $sc, @items ) if $sc eq 'predue' || $sc eq 'due';
+    return run_overdue( $n, $patron, $sc, @items ) if $sc =~ /^overdue/;
     die "unknown scenario '$sc'\n";
 }
+
+sub fingerprint {
+    return join '|', map { $_ // '' } $dbh->selectrow_array(
+        q{SELECT (SELECT CONCAT(COUNT(*), '/', SUM(CRC32(CONCAT_WS('~', code, title, content, is_html)))) FROM letter),
+                 (SELECT CONCAT(COUNT(*), '/', MAX(overduerules_id)) FROM overduerules),
+                 (SELECT COUNT(*) FROM overduerules_transport_types),
+                 (SELECT COUNT(*) FROM message_queue), (SELECT COUNT(*) FROM accountlines)}
+    );
+}
+
+# ── due and overdue notices: the real cron scripts ───────────────────────────────────────────────────────────────
+# Started as its own program, a cron script would not see the sample loans and would queue real notices for every
+# patron. Here its file runs inside this process, on this connection, so it works in our transaction and everything
+# it queues is rolled back. The scripts only queue: nothing is sent until process_message_queue.pl, which never runs
+# here, and which could not see the rows anyway.
+sub run_cron {
+    my ( $name, @args ) = @_;
+    my ($file) = grep { -f } map { C4::Context->config('intranetdir') . "/$_/$name" } qw( misc/cronjobs ../bin/cronjobs bin/cronjobs );
+    ($file) = grep { -f } "/usr/share/koha/bin/cronjobs/$name" unless $file;
+    die "cannot find $name in this Koha\n" unless $file;
+
+    local @ARGV = @args;
+    local $0    = $file;
+    local *STDOUT;    # overdue_notices.pl adds an output layer to STDOUT, which would corrupt our JSON
+    open STDOUT, '>', '/dev/null' or die "cannot open /dev/null: $!\n";
+    local $SIG{__WARN__} = sub { warn @_ unless $_[0] =~ /^Subroutine \w+ redefined/ };
+    my $done = do $file;
+    die "$name: $@" if $@;
+    die "$name: cannot read it: $!\n" unless defined $done;
+    C4::Context->set_userenv( 0, 'koha', '', 'Koha', 'Staff', 'KNTLIB', 'Riverside Library', 1 );
+    C4::Context->interface('intranet');
+}
+
+# PREDUE: one loan due in 3 days (the day the patron asked for) and one due in 10, which must not be mentioned.
+# DUE: one loan due today and one due in 10 days.
+sub run_advance {
+    my ( $n, $patron, $sc, @items ) = @_;
+    my $days = $sc eq 'due' ? 0 : 3;
+    my $due  = dt_from_string->add( days => $days )->set( hour => 23, minute => 59, second => 0 );
+    AddIssue( $patron, $items[0]->barcode, $due );
+    AddIssue( $patron, $items[1]->barcode, dt_from_string->add( days => 10 ) );
+    C4::Members::Messaging::SetMessagingPreference(
+        {
+            borrowernumber          => $patron->borrowernumber,
+            message_attribute_id    => $attr{ $sc eq 'due' ? 'Item_Due' : 'Advance_Notice' },
+            message_transport_types => [ $n->{transport} ],
+            wants_digest            => 0,
+            days_in_advance         => $days,
+        }
+    );
+    run_cron( 'advance_notices.pl', '-c', '--library', 'KNTLIB' );
+    return { %{ queued( $patron, $n->{code}, $n->{transport} ) }, due => printed_date($due) };
+}
+
+# overdue1 / overdue2 / overdue3, optionally ":fine" (Koha has charged $2.50 on the first item) or ":restricted" (the
+# trigger restricts the account). Triggers at 7, 14 and 28 days; two items in the stage, a third not overdue.
+sub run_overdue {
+    my ( $n, $patron, $sc, @items ) = @_;
+    my ( $stage, $extra ) = $sc =~ /^overdue([123])(?::(fine|restricted))?\z/ or die "unknown scenario '$sc'\n";
+    my $due = dt_from_string->subtract( days => { 1 => 8, 2 => 16, 3 => 30 }->{$stage} )
+        ->set( hour => 23, minute => 59, second => 0 );
+    AddIssue( $patron, $_->barcode, $due ) for @items[ 0, 1 ];
+    AddIssue( $patron, $items[2]->barcode, dt_from_string->add( days => 10 ) );
+
+    $patron->category->overduenoticerequired(1)->store;
+    $dbh->do(
+        q{INSERT INTO overduerules (branchcode, categorycode, delay1, letter1, delay2, letter2, delay3, letter3,
+            debarred1, debarred2, debarred3) VALUES ('KNTLIB', ?, 7, 'ODUE', 14, 'ODUE2', 28, 'ODUE3', ?, ?, ?)},
+        undef, $patron->categorycode, map { ( $extra // '' ) eq 'restricted' && $_ == $stage ? 1 : 0 } 1 .. 3
+    );
+    $dbh->do(
+        q{INSERT INTO overduerules_transport_types (letternumber, message_transport_type, overduerules_id)
+          VALUES (?, ?, ?)}, undef, $stage, $n->{transport}, $dbh->last_insert_id( undef, undef, undef, undef )
+    );
+    if ( ( $extra // '' ) eq 'fine' ) {
+        my $loan = Koha::Checkouts->find( { itemnumber => $items[0]->itemnumber } );
+        C4::Overdues::UpdateFine(
+            {
+                issue_id       => $loan->issue_id,
+                itemnumber     => $items[0]->itemnumber,
+                borrowernumber => $patron->borrowernumber,
+                amount         => 2.5,
+                due            => $due,
+            }
+        );
+    }
+    $patron->address('12 River Road')->city('Riverside')->zipcode('90210')->store if $n->{transport} eq 'print';
+    run_cron( 'overdue_notices.pl', '--library', 'KNTLIB' );
+    return { %{ queued( $patron, $n->{code}, $n->{transport} ) }, due => printed_date($due) };
+}
+
+# The date as Koha prints it, for the "{DUE}" the checks look for.
+sub printed_date { return output_pref( { dt => $_[0], dateonly => 1 } ) }

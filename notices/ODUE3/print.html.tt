@@ -1,0 +1,31 @@
+[%-
+  # ── Your library: change the values on these four lines only. ──────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  logo_url     = "";                 # full https:// address of your logo, about 200 x 60 pixels; "" = no logo
+  brand_colour = "#1f4e79";          # your colour, as #rrggbb
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+  USE Price;
+-%]
+[%- fines_total = 0; FOREACH overdue IN overdues; fines_total = fines_total + overdue.overdue_fines.total_outstanding; END -%]
+<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1a1a1a;">
+[% IF logo_url %]<img src="[% logo_url %]" alt="[% library_name %]" style="display:block;max-width:220px;max-height:60px;margin:0 0 12px;">[% END %]
+<div style="border-top:4px solid [% brand_colour %];padding-top:12px;">
+<p style="margin:0 0 16px;font-size:20px;font-weight:bold;color:[% brand_colour %];">[% library_name %]</p>
+[% IF borrower.address %]<p style="margin:0 0 24px;">[% borrower.firstname %] [% borrower.surname %]<br>[% borrower.address %][% IF borrower.address2 %]<br>[% borrower.address2 %][% END %][% IF borrower.city %]<br>[% borrower.city %][% END %][% IF borrower.zipcode %] [% borrower.zipcode %][% END %][% IF borrower.country %]<br>[% borrower.country %][% END %]</p>[% END %]
+<p style="margin:0 0 12px;font-size:18px;font-weight:bold;">Final notice</p>
+<p style="margin:0 0 12px;">[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]</p>
+<p style="margin:0 0 12px;">This is the final notice about the items below. They are long overdue and our earlier reminders have not been answered. Return them to the library without delay.</p>
+<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">
+[% FOREACH overdue IN overdues %]
+<tr><td style="padding:10px 0;border-bottom:1px solid #dddddd;"><strong>[% overdue.item.biblio.title | $Remove_MARC_punctuation | trim %]</strong>[% IF overdue.item.biblio.author %]<br>[% overdue.item.biblio.author | $Remove_MARC_punctuation | trim %][% END %]<br><span style="color:#555555;font-size:14px;">Was due <strong>[% overdue.date_due | $KohaDates %]</strong> · Barcode [% overdue.item.barcode %][% IF overdue.overdue_fines.total_outstanding > 0 %] · Fine so far [% overdue.overdue_fines.total_outstanding | $Price with_symbol => 1 %][% END %]</span></td></tr>
+[% END %]
+</table>
+[% IF fines_total > 0 %]<p style="margin:0 0 12px;">Fines charged so far on these items: <strong>[% fines_total | $Price with_symbol => 1 %]</strong>.</p>[% END %]
+[% IF borrower.is_debarred %]<p style="margin:0 0 12px;">Your library account is restricted at the moment, so you may not be able to borrow or renew.</p>[% END %]
+<p style="margin:0 0 12px;">If you cannot return an item, contact the library straight away. The library may have to treat it as lost and ask you to pay for it.</p>
+[% IF branch.branchphone || branch.branchemail %]<p style="margin:0 0 12px;">Questions? Contact us.[% IF branch.branchphone %] Phone: [% branch.branchphone %].[% END %][% IF branch.branchemail %] Email: [% branch.branchemail %].[% END %]</p>[% END %]
+<p style="margin:0 0 12px;">Thank you,<br>[% library_name %]</p>
+[% IF footer_note %]<p style="margin:0;font-size:13px;color:#555555;">[% footer_note %]</p>[% END %]
+</div>
+</div>

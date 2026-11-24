@@ -1,0 +1,38 @@
+[%-
+  # ── Your library: change the values on these two lines only. ───────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+  USE Price;
+-%]
+[%- fines_total = 0; FOREACH overdue IN overdues; fines_total = fines_total + overdue.overdue_fines.total_outstanding; END -%]
+FINAL NOTICE
+
+[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]
+
+This is the final notice about the items below. They are long overdue and our earlier reminders have not been answered. Return them to the library without delay.
+[% FOREACH overdue IN overdues %]
+* [% overdue.item.biblio.title | $Remove_MARC_punctuation | trim %][% IF overdue.item.biblio.author %], [% overdue.item.biblio.author | $Remove_MARC_punctuation | trim %][% END %]
+  Was due [% overdue.date_due | $KohaDates %] · Barcode [% overdue.item.barcode %][% IF overdue.overdue_fines.total_outstanding > 0 %] · Fine so far [% overdue.overdue_fines.total_outstanding | $Price with_symbol => 1 %][% END %]
+[% END %]
+[% IF fines_total > 0 -%]
+Fines charged so far on these items: [% fines_total | $Price with_symbol => 1 %]
+
+[% END -%]
+[% IF borrower.is_debarred -%]
+Your library account is restricted at the moment, so you may not be able to borrow or renew.
+
+[% END -%]
+If you cannot return an item, contact the library straight away. The library may have to treat it as lost and ask you to pay for it.
+
+[% IF branch.branchphone || branch.branchemail -%]
+Questions? Contact us.[% IF branch.branchphone %] Phone: [% branch.branchphone %].[% END %][% IF branch.branchemail %] Email: [% branch.branchemail %].[% END %]
+
+[% END -%]
+[% IF Koha.Preference('OPACBaseURL') -%]
+See your loans and renew them online: [% Koha.Preference('OPACBaseURL') %]/cgi-bin/koha/opac-user.pl
+
+[% END -%]
+Thank you,
+[% library_name %]
+[% IF footer_note %][% footer_note %][% END %]

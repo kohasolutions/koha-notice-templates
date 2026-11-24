@@ -2,7 +2,7 @@
 // The live proof is tools/render.mjs against a real Koha.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { markValues, unmark, checkOutput } from '../tools/render.mjs'
+import { markValues, unmark, checkOutput, casesOf } from '../tools/render.mjs'
 import { problemsOf } from '../tools/lint.mjs'
 
 const OPEN = '⁠⁣'
@@ -69,4 +69,40 @@ test('lint catches a ---- in a notice that is not a digest, and a folder/code mi
 test("lint allows the library's own logo_url", () => {
   const files = { 'email.html.tt': BLOCK + 'h\n----\n<img src="[% logo_url %]">\n----\n' }
   assert.deepEqual(problemsOf('CHECKOUT', meta, files), [])
+})
+
+// ── notices with several situations (overdue: no fine, a fine, a restricted account) ──
+const overdue = {
+  code: 'ODUE', digest: false, scenario: 'overdue1', expect: ['KNT-ITEM-1', '{DUE}'], expect_sms: ['{DUE}'], absent: ['KNT-ITEM-3'],
+  cases: [
+    { name: 'no-fine', scenario: 'overdue1', absent: ['Fine so far'] },
+    { name: 'fine', scenario: 'overdue1:fine', expect: ['Fine so far $2.50'], counts: { 'Fine so far': 1 } },
+  ],
+}
+
+test('casesOf runs a notice once per situation, adding to the notice’s own expectations; the first keeps the plain name', () => {
+  const [a, b] = casesOf(overdue)
+  assert.deepEqual([a.case, b.case], [null, 'fine'])
+  assert.equal(b.scenario, 'overdue1:fine')
+  assert.deepEqual(b.expect, ['KNT-ITEM-1', '{DUE}', 'Fine so far $2.50'])
+  assert.deepEqual(a.absent, ['KNT-ITEM-3', 'Fine so far'])
+  assert.deepEqual(casesOf(notice).map((n) => n.expect), [notice.expect])
+})
+
+test('a fines line fails without a fine, and its absence or repetition fails with one', () => {
+  const [none, fine] = casesOf(overdue)
+  const body = (f) => `KNT-ITEM-1 was due 11/16/2026${f}
+`
+  const run = (n, f) => checkOutput(n, 'email.txt.tt', { content: body(f), subject: '', due: '11/16/2026' })
+  assert.deepEqual(run(none, ''), [])
+  assert.deepEqual(run(fine, ' Fine so far $2.50'), [])
+  assert.ok(run(none, ' Fine so far $0.00').some((x) => x.includes('must not be in the output')))
+  assert.ok(run(fine, '').some((x) => x.includes('Fine so far $2.50')))
+  assert.ok(run(fine, ' Fine so far $2.50 Fine so far $0.00').some((x) => x.includes('appears 2 times')))
+})
+
+test('an SMS must carry the due date, and an item that is not due must not appear', () => {
+  const [n] = casesOf(overdue)
+  assert.ok(checkOutput(n, 'sms.txt.tt', { content: 'Lib: overdue', subject: '', due: '11/16/2026' }).some((x) => x.includes('in the SMS')))
+  assert.ok(checkOutput(n, 'sms.txt.tt', { content: 'due 11/16/2026 KNT-ITEM-3', subject: '', due: '11/16/2026' }).some((x) => x.includes('KNT-ITEM-3')))
 })
