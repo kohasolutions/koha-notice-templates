@@ -20,6 +20,7 @@ use Try::Tiny;
 use Koha;
 use C4::Context;
 use C4::Circulation qw(AddIssue AddReturn);
+use Koha::Cache::Memory::Lite;
 use C4::Members;
 use C4::Members::Messaging;
 use Koha::Database;
@@ -67,6 +68,8 @@ my ( @results, @committed );
 for my $n ( @{ $input->{notices} } ) {
     my %r = ( code => $n->{code}, transport => $n->{transport}, ok => 0 );
     $schema->txn_begin;
+    # loan rules of the notice before live on in this process: the rollback does not reach this cache
+    Koha::Cache::Memory::Lite->flush;
     try {
         my $s = setup_sample();
         save_letter($n);
@@ -415,7 +418,6 @@ sub scenario_auto_renewals {
     my ( $n, $s ) = @_;
     require C4::Reserves;
     require Koha::CirculationRules;
-    require Koha::Cache::Memory::Lite;
     my ( $patron, $item, $case ) = ( $s->{patron}, $s->{items}[0], $n->{case} );
     die "this scenario needs Zebra: another index would be written outside the transaction\n"
         unless C4::Context->preference('SearchEngine') eq 'Zebra';
@@ -603,7 +605,6 @@ sub scenario_auto_renewals_digest {
     my ( $n, $s ) = @_;
     require C4::Reserves;
     require Koha::CirculationRules;
-    require Koha::Cache::Memory::Lite;
     my ( $patron, @items ) = ( $s->{patron}, @{ $s->{items} } );
     my $case = $n->{case};
     die "this scenario needs Zebra: another index would be written outside the transaction\n"
