@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 // Unit tests for the checks in tools/render.mjs and tools/lint.mjs: they run in CI without a Koha.
 // The live proof is tools/render.mjs against a real Koha.
 import { test } from 'node:test'
@@ -130,4 +131,32 @@ test('lint catches a subject Koha would not store, and cases with no name or the
   assert.ok(problemsOf('CHECKOUT', { ...m, subject: 'x'.repeat(191) }, files).some((x) => x.includes('Koha keeps 200')))
   assert.ok(problemsOf('CHECKOUT', { ...m, cases: [kase, kase] }, files).some((x) => x.includes('same name')))
   assert.ok(problemsOf('CHECKOUT', { ...m, cases: [{}] }, files).some((x) => x.includes('lower-case name')))
+})
+
+test('the SMS and the header count follow the number of items in the case; the default stays two', () => {
+  const body = (n) => 'Lib\n' + '- Book\n'.repeat(n)
+  const n = { code: 'HOLDDGST', digest: true, cases: [{ name: 'three', items: 3 }] }
+  assert.deepEqual(checkOutput(casesOf(n)[0], 'sms.txt.tt', { content: body(3), subject: '' }), [])
+  assert.ok(checkOutput(casesOf(n)[0], 'sms.txt.tt', { content: body(2), subject: '' }).some((x) => x.includes('expected 3')))
+  assert.ok(checkOutput(notice, 'sms.txt.tt', { content: body(3), subject: '' }).some((x) => x.includes('expected 2')))
+})
+
+test('library_per_item allows the library once per item, and no repeated header', () => {
+  const n = { code: 'HOLDDGST', digest: true, items: 3, library_per_item: true }
+  const text = (times) => 'Jane\n' + 'Riverside Library\n'.repeat(times)
+  assert.deepEqual(checkOutput(n, 'email.txt.tt', { content: text(6), subject: '' }), [])
+  assert.ok(checkOutput(n, 'email.txt.tt', { content: text(7), subject: '' }).some((x) => x.includes('repeated')))
+  assert.ok(checkOutput({ ...n, library_per_item: false }, 'email.txt.tt', { content: text(4), subject: '' }).some((x) => x.includes('repeated')))
+})
+
+// The live test makes every reason true for AUTO_RENEWALS; the digest must say the same thing for each of them.
+test('AUTO_RENEWALS_DGST gives the same text as AUTO_RENEWALS for every reason Koha has', () => {
+  const reasons = (code, f) => {
+    const t = readFileSync(new URL(`../notices/${code}/${f}`, import.meta.url), 'utf8')
+    return t.match(/\[% IF checkout\.auto_renew_error == 'too_many' %\].*?\[% END %\]/s)[0]
+  }
+  for (const f of ['email.html.tt', 'email.txt.tt']) {
+    assert.ok(reasons('AUTO_RENEWALS', f).split('ELSIF').length >= 9)
+    assert.equal(reasons('AUTO_RENEWALS_DGST', f), reasons('AUTO_RENEWALS', f))
+  }
 })

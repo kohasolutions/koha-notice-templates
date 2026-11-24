@@ -7,7 +7,7 @@
 //   - notice.json has every field, and the folder has at least one template;
 //   - every template starts with the "Your library" block (the one place a library edits, and the only part the
 //     live builder changes);
-//   - a digest notice (CHECKOUT, CHECKIN) has exactly two ---- lines, and no other notice has any (Koha splits a
+//   - a digest notice (CHECKOUT, CHECKIN, HOLDDGST) has exactly two ---- lines, and no other notice has any (Koha splits a
 //     notice on ---- even inside text, so a stray one breaks it);
 //   - no image or stylesheet is loaded from anywhere but the library's own logo_url;
 //   - Template Toolkit can parse every template (tools/tt-parse.pl, run when Perl's Template module is installed).

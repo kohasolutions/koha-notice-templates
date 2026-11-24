@@ -87,6 +87,7 @@ for my $n ( @{ $input->{notices} } ) {
 # Every transaction was rolled back: prove it.
 my @leaked = grep { $_ } (
     Koha::Libraries->find('KNTLIB')                      ? 'library KNTLIB'   : undef,
+    Koha::Libraries->find('KNTLIB2')                     ? 'library KNTLIB2'  : undef,
     Koha::Patrons->search( { cardnumber => { -like => 'KNT-%' } } )->count ? 'patrons KNT-*' : undef,
     Koha::Items->search( { barcode => { -like => 'KNT-ITEM-%' } } )->count ? 'items KNT-ITEM-*' : undef,
     @committed                 ? "a committed transaction (@committed)"                        : undef,
@@ -226,6 +227,9 @@ sub run_scenario {
     return scenario_hold( $n, $s )          if $sc eq 'hold';
     return scenario_hold_reminder( $n, $s ) if $sc eq 'hold_reminder';
     return scenario_auto_renewals( $n, $s ) if $sc eq 'auto_renewals';
+    return scenario_advance_digest( $n, $s )       if $sc eq 'predue_digest' || $sc eq 'due_digest';
+    return scenario_hold_digest( $n, $s )          if $sc eq 'hold_digest';
+    return scenario_auto_renewals_digest( $n, $s ) if $sc eq 'auto_renewals_digest';
     die "unknown scenario '$sc'\n";
 }
 
@@ -511,5 +515,165 @@ sub scenario_auto_renewals {
     die "Koha answered '$error', the case is '$case'\n" unless $error eq $case || $case eq 'unknown_reason';
     my $out = queued( $patron, 'AUTO_RENEWALS', $n->{transport} );
     $out->{must} = [ shown_date( $checkout->date_due ) ];
+    return $out;
+}
+
+# ── digests ("Digests only" in the patron's messaging preferences) ───────────────────────────────────────────────
+sub wants_digest {
+    my ( $patron, $message_name, $transport, $days ) = @_;
+    C4::Members::Messaging::SetMessagingPreference(
+        {
+            borrowernumber          => $patron->borrowernumber,
+            message_attribute_id    => $attr{$message_name},
+            message_transport_types => [$transport],
+            wants_digest            => 1,
+            days_in_advance         => $days // 0,
+        }
+    );
+}
+
+# PREDUEDGST / DUEDGST, from Koha's own advance_notices.pl. The script sends digests for every library, whatever
+# --library says, so every other patron's digest choice is switched off first (rolled back with the rest): they become
+# ordinary patrons of other libraries, which --library skips. Case "one": item 1 is due, the others in 10 days.
+sub scenario_advance_digest {
+    my ( $n, $s ) = @_;
+    my ( $patron, @items ) = ( $s->{patron}, @{ $s->{items} } );
+    my $days = $n->{scenario} eq 'due_digest' ? 0 : 3;
+    my $due  = dt_from_string->add( days => $days )->set( hour => 23, minute => 59, second => 0 );
+    my $i    = 0;
+    for my $item (@items) {
+        AddIssue( $patron, $item->barcode, $n->{case} eq 'three' || $i == 0 ? $due->clone : dt_from_string->add( days => 10 ),
+            undef, dt_from_string->subtract( days => 5 ) );    # lent five days ago, so the loan date is never the due date
+        $i++;
+    }
+    $dbh->do( q{UPDATE borrower_message_preferences SET wants_digest = 0 WHERE wants_digest = 1 AND borrowernumber IS NOT NULL} );
+    wants_digest( $patron, $days ? 'Advance_Notice' : 'Item_Due', $n->{transport}, $days );
+    run_cron( 'advance_notices.pl', '-c', '--library', 'KNTLIB' );
+    return { %{ queued( $patron, $n->{code}, $n->{transport} ) }, due => printed_date($due) };
+}
+
+# HOLDDGST: each hold is placed and confirmed as waiting with Koha's own code, which adds it to the unsent message.
+sub scenario_hold_digest {
+    my ( $n, $s ) = @_;
+    require C4::Reserves;
+    local $ENV{OVERRIDE_SYSPREF_RealTimeHoldsQueue}     = 0;    # no background job
+    local $ENV{OVERRIDE_SYSPREF_ReservesMaxPickUpDelay} = 7;
+    my ( $patron, @items ) = ( $s->{patron}, @{ $s->{items} } );
+    my $case = $n->{case};
+    wants_digest( $patron, 'Hold_Filled', $n->{transport} );
+    Koha::Library->new(
+        { branchcode => 'KNTLIB2', branchname => 'Hillside Branch', branchaddress1 => '2 Hill Road', branchcity => 'Riverside' }
+    )->store if $case eq 'two_libraries';
+
+    my @must;
+    my $last = { one => 0, two_libraries => 1, three => 2 }->{$case} // die "unknown case '$case'\n";
+    for my $i ( reverse 0 .. $last ) {    # the last hold is at KNTLIB: Koha takes the greeting from it
+        my $item = $items[$i];
+        # a different deadline per hold, so a template that repeats one is caught
+        local $ENV{OVERRIDE_SYSPREF_ReservesMaxPickUpDelay} = 7 + $i;
+        my $hold;
+        if ( $case eq 'two_libraries' && $i == 1 ) {
+            my $id = C4::Reserves::AddReserve(
+                {
+                    branchcode => 'KNTLIB2', borrowernumber => $patron->borrowernumber,
+                    biblionumber => $item->biblionumber, itemnumber => $item->itemnumber, priority => 1,
+                }
+            );
+            C4::Reserves::ModReserveAffect( $item->itemnumber, $patron->borrowernumber, 0, $id );
+            $hold = Koha::Holds->find($id);
+        } else {
+            $hold = waiting_hold( $patron, $item );
+        }
+        die "the hold has no pickup deadline\n" unless $hold->expirationdate;
+        push @must, shown_date( $hold->expirationdate );
+    }
+    return { %{ queued( $patron, 'HOLDDGST', $n->{transport} ) }, must => \@must };
+}
+
+# AUTO_RENEWALS_DGST, from Koha's own automatic_renewals.pl, with every other patron's automatic renewal switched off
+# (rolled back). renewed: three loans. last_renewal: one loan, its last. not_renewed: one overdue loan and two reserved
+# by another reader. mixed: one renewed, one reserved by another reader, one too early to renew, which must be left out.
+sub scenario_auto_renewals_digest {
+    my ( $n, $s ) = @_;
+    require C4::Reserves;
+    require Koha::CirculationRules;
+    require Koha::Cache::Memory::Lite;
+    my ( $patron, @items ) = ( $s->{patron}, @{ $s->{items} } );
+    my $case = $n->{case};
+    die "this scenario needs Zebra: another index would be written outside the transaction\n"
+        unless C4::Context->preference('SearchEngine') eq 'Zebra';
+
+    my %on = (
+        AutoRenewalNotices            => 'preferences',
+        RealTimeHoldsQueue            => 0,
+        RenewalSendNotice             => 0,
+        CircControl                   => 'ItemHomeLibrary',
+        UnseenRenewals                => 0,
+        FineNoRenewals                => 100,
+        FineNoRenewalsBlockAutoRenew  => 0,
+        OverduesBlockRenewing         => 'blockitem',
+        RestrictionBlockRenewing      => 0,
+        BlockExpiredPatronOpacActions => '',
+        ItemsDeniedRenewal            => '',
+        AutomaticRenewalPeriodBase    => 'date_due',    # each loan keeps its own new date
+    );
+    local @ENV{ map { "OVERRIDE_SYSPREF_$_" } keys %on } = values %on;
+    Koha::Cache::Memory::Lite->flush;
+    my %plan = (    # days until due, and whether another reader has reserved it
+        renewed      => [ [3], [4], [5] ],
+        last_renewal => [ [3] ],
+        not_renewed  => [ [-3], [ 4, 1 ], [ 5, 1 ] ],
+        mixed        => [ [3], [ 4, 1 ], [60] ],
+    );
+    my @plan = @{ $plan{$case} // die "unknown case '$case'\n" };
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode => 'KNTLIB', categorycode => $patron->categorycode, itemtype => $_,
+            rules      => {
+                auto_renew => 1, renewalsallowed => $case eq 'last_renewal' ? 1 : 5, renewalperiod => 14, issuelength => 14,
+                lengthunit => 'days', noautorenewalbefore => 30, no_auto_renewal_after => '',
+                no_auto_renewal_after_hard_limit => '', unseen_renewals_allowed => '',
+            },
+        }
+    ) for keys %{ { map { $_->effective_itemtype => 1 } @items } };
+    Koha::Cache::Memory::Lite->flush;
+
+    my $other = Koha::Patron->new(
+        {
+            cardnumber   => 'KNT-0002', surname => 'Other', branchcode => 'KNTLIB', categorycode => $patron->categorycode,
+            dateexpiry   => dt_from_string->add( years => 1 )->ymd,
+        }
+    )->store;
+    for my $i ( 0 .. $#plan ) {
+        my ( $days, $reserved ) = @{ $plan[$i] };
+        my $due = dt_from_string->add( days => $days )->set( hour => 23, minute => 59, second => 0 );
+        AddIssue( $patron, $items[$i]->barcode, $due, undef, dt_from_string->subtract( days => 10 ) );
+        C4::Reserves::AddReserve(
+            {
+                branchcode   => 'KNTLIB', borrowernumber => $other->borrowernumber,
+                biblionumber => $items[$i]->biblionumber, itemnumber => $items[$i]->itemnumber, priority => 1,
+            }
+        ) if $reserved;
+    }
+    wants_digest( $patron, 'Auto_Renewals', $n->{transport} );
+    $dbh->do( q{UPDATE issues SET auto_renew = 0 WHERE auto_renew = 1 AND borrowernumber <> ?}, undef, $patron->borrowernumber );
+    run_cron( 'automatic_renewals.pl', '-c' );
+
+    my @loans = map { Koha::Checkouts->find( { itemnumber => $_->itemnumber } ) } @items[ 0 .. $#plan ];
+    my @got   = map { $_->auto_renew_error // 'renewed' } @loans;
+    my %want  = (
+        renewed      => 'renewed renewed renewed',
+        last_renewal => 'auto_renew_final',
+        not_renewed  => 'overdue on_reserve on_reserve',
+        mixed        => 'renewed on_reserve auto_too_soon',
+    );
+    die "Koha answered '@got', expected '$want{$case}'\n" unless "@got" eq $want{$case};
+    my $out = queued( $patron, 'AUTO_RENEWALS_DGST', $n->{transport} );
+    if ( $n->{transport} eq 'sms' ) {    # the SMS names the first two that were not renewed
+        my @not = grep { $_->auto_renew_error && $_->auto_renew_error !~ /final$|too_soon$/ } @loans;
+        $out->{must} = [ map { shown_date( $_->date_due ) } grep { defined } @not[ 0, 1 ] ];
+    } else {
+        $out->{must} = [ map { shown_date( $_->date_due ) } grep { ( $_->auto_renew_error // '' ) ne 'auto_too_soon' } @loans ];
+    }
     return $out;
 }

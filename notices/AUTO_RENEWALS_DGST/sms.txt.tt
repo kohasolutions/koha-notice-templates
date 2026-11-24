@@ -1,0 +1,8 @@
+[%-
+  # ── Your library: change the value on this line only. ──────────────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+-%]
+[% library_name %]: automatic renewals. [% IF success %]Renewed: [% success %].[% END %][% IF success && error %] [% END %][% IF error %]Not renewed: [% error %].[% END %]
+[% IF error %][% shown = 0 %][% FOREACH checkout IN checkouts %][% NEXT IF checkout.auto_renew_error == 'auto_too_soon' %][% NEXT IF !checkout.auto_renew_error || checkout.auto_renew_error == 'auto_renew_final' || checkout.auto_renew_error == 'auto_unseen_final' %][% shown = shown + 1 %][% IF shown <= 2 %]- [% checkout.item.biblio.title | $Remove_MARC_punctuation | trim | truncate(40) %] not renewed, due [% checkout.date_due | $KohaDates as_due_date => 1 %]
+[% END %][% END %][% IF error > 2 %]- and [% error - 2 %] more not renewed
+[% END %][% END %]See your account for details.

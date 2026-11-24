@@ -1,0 +1,27 @@
+[%-
+  # ── Your library: change the values on these two lines only. ───────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+-%]
+[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]
+
+We checked your loans for automatic renewal. [% IF success %]Renewed: [% success %].[% END %][% IF success && error %] [% END %][% IF error %]Not renewed: [% error %].[% END %]
+
+[% FOREACH checkout IN checkouts -%]
+[% NEXT IF checkout.auto_renew_error == 'auto_too_soon' -%]
+* [% checkout.item.biblio.title | $Remove_MARC_punctuation | trim %][% IF checkout.item.biblio.author %], [% checkout.item.biblio.author | $Remove_MARC_punctuation | trim %][% END %]
+  Barcode [% checkout.item.barcode %]
+  [% IF !checkout.auto_renew_error || checkout.auto_renew_error == 'auto_renew_final' || checkout.auto_renew_error == 'auto_unseen_final' %]Renewed: it is now due on [% checkout.date_due | $KohaDates as_due_date => 1 %].[% IF checkout.auto_renew_error == 'auto_renew_final' %]
+  This was the last automatic renewal: please return it by that date.[% ELSIF checkout.auto_renew_error == 'auto_unseen_final' %]
+  It cannot be renewed automatically again: bring it to the library to renew it.[% END %][% ELSE %]Not renewed. [% IF checkout.auto_renew_error == 'too_many' %]It has been renewed as many times as the library allows.[% ELSIF checkout.auto_renew_error == 'on_reserve' %]Another reader has reserved it.[% ELSIF checkout.auto_renew_error == 'restriction' %]Your account is restricted at the moment.[% ELSIF checkout.auto_renew_error == 'overdue' %]You have overdue items.[% ELSIF checkout.auto_renew_error == 'too_unseen' %]It must be brought to the library to be renewed again.[% ELSIF checkout.auto_renew_error == 'auto_account_expired' %]Your library membership has expired.[% ELSIF checkout.auto_renew_error == 'auto_too_late' %]It has reached the longest time it can be on loan.[% ELSIF checkout.auto_renew_error == 'auto_too_much_owing' %]You owe more in charges than the library allows.[% ELSIF checkout.auto_renew_error == 'item_denied_renewal' %]This item cannot be renewed.[% ELSE %]Please ask the library for the reason.[% END %]
+  [% IF checkout.is_overdue %]It was due on [% checkout.date_due | $KohaDates as_due_date => 1 %]. Please return it as soon as you can.[% ELSE %]Please return it by [% checkout.date_due | $KohaDates as_due_date => 1 %].[% END %][% END %]
+
+[% END -%]
+[% IF Koha.Preference('OPACBaseURL') -%]
+See your loans online: [% Koha.Preference('OPACBaseURL') %]/cgi-bin/koha/opac-user.pl
+
+[% END -%]
+Thank you,
+[% library_name %]
+[% IF footer_note %][% footer_note %][% END %]

@@ -1,0 +1,99 @@
+{
+  "code": "AUTO_RENEWALS_DGST",
+  "module": "circulation",
+  "name": "Automatic renewal results (digest)",
+  "menu": "Circulation",
+  "subject": "Automatic renewals: [% IF success %][% success %] renewed[% END %][% IF success && error %], [% END %][% IF error %][% error %] not renewed[% END %]",
+  "scenario": "auto_renewals_digest",
+  "digest": false,
+  "about": "Sent by the cron script misc/cronjobs/automatic_renewals.pl, one message for all automatic-renewal loans when any result changed since the last run, to a patron who chose 'Auto renewal' with 'Digests only'. A loan that is too early to renew is left out. The SMS names up to two loans that were not renewed.",
+  "expect": [
+    "Dear Jane"
+  ],
+  "expect_sms": [
+    "Riverside Library: automatic renewals."
+  ],
+  "cases": [
+    {
+      "name": "renewed",
+      "expect": [
+        "KNT-ITEM-1",
+        "KNT-ITEM-2",
+        "KNT-ITEM-3"
+      ],
+      "expect_all": [
+        "Renewed: 3."
+      ],
+      "counts": {
+        "it is now due on": 3,
+        "KNT-ITEM-": 3
+      },
+      "absent": [
+        "not renewed"
+      ],
+      "subject_starts": "Automatic renewals: 3 renewed"
+    },
+    {
+      "name": "last_renewal",
+      "expect": [
+        "This was the last automatic renewal"
+      ],
+      "expect_all": [
+        "Renewed: 1."
+      ],
+      "absent": [
+        "not renewed"
+      ],
+      "counts": {
+        "KNT-ITEM-": 1
+      },
+      "subject_starts": "Automatic renewals: 1 renewed"
+    },
+    {
+      "name": "not_renewed",
+      "expect": [
+        "You have overdue items.",
+        "Another reader has reserved it.",
+        "It was due on"
+      ],
+      "expect_all": [
+        "Not renewed: 3."
+      ],
+      "expect_sms": [
+        "and 1 more not renewed"
+      ],
+      "absent": [
+        "now due on",
+        ". Renewed:"
+      ],
+      "counts": {
+        "KNT-ITEM-": 3,
+        "Not renewed. ": 3,
+        "It was due on": 1,
+        "Please return it by": 2
+      },
+      "subject_starts": "Automatic renewals: 3 not renewed"
+    },
+    {
+      "name": "mixed",
+      "expect": [
+        "KNT-ITEM-1",
+        "KNT-ITEM-2",
+        "Another reader has reserved it."
+      ],
+      "expect_all": [
+        "Renewed: 1. Not renewed: 1."
+      ],
+      "absent": [
+        "KNT-ITEM-3",
+        "more not renewed"
+      ],
+      "counts": {
+        "it is now due on": 1,
+        "Please return it by": 1,
+        "KNT-ITEM-": 2
+      },
+      "subject_starts": "Automatic renewals: 1 renewed, 1 not renewed"
+    }
+  ]
+}

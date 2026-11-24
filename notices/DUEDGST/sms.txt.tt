@@ -1,0 +1,8 @@
+[%-
+  # ── Your library: change the value on this line only. ──────────────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+-%]
+[% library_name %]: [% IF checkouts.size == 1 %]1 item is[% ELSE %][% checkouts.size %] items are[% END %] due today, [% checkouts.0.date_due | $KohaDates %]
+[% FOREACH checkout IN checkouts %][% IF loop.count <= 2 %]- [% checkout.title | $Remove_MARC_punctuation | trim | truncate(40) %]
+[% ELSIF loop.count == 3 %]- and [% loop.size - 2 %] more
+[% END %][% END %]Please return or renew.

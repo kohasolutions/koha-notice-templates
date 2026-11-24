@@ -60,6 +60,7 @@ export function casesOf(notice) {
     expect_all: c.expect_all ?? [],
     subject_starts: c.subject_starts,
     counts: c.counts ?? {},
+    items: c.items ?? notice.items,
   }))
 }
 
@@ -79,7 +80,7 @@ export function checkOutput(notice, file, out) {
   if (TRANSPORTS[file].transport === 'sms') {
     // an SMS carries no barcodes: one "- title" line per item instead
     const lines = clean.split('\n').filter((l) => l.startsWith('- ')).length
-    if (notice.digest && lines !== 2) problems.push(`the SMS lists ${lines} items, expected 2`)
+    if (notice.digest && lines !== (notice.items ?? 2)) problems.push(`the SMS lists ${lines} items, expected ${notice.items ?? 2}`)
     for (const e of notice.expect_sms ?? []) if (!has(clean, e, out.due)) problems.push(`expected "${e}" in the SMS`)
   } else {
     for (const e of notice.expect ?? []) if (!has(clean, e, out.due)) problems.push(`expected "${e}" in the output`)
@@ -96,7 +97,9 @@ export function checkOutput(notice, file, out) {
     // One message for the visit: the greeting (header) once, and the footer once, whatever the item count.
     const count = (s) => clean.split(s).length - 1
     if (file !== 'sms.txt.tt' && count('Jane') !== 1) problems.push(`the greeting appears ${count('Jane')} times: check the two ---- lines`)
-    if (count('Riverside Library') > (file === 'sms.txt.tt' ? 1 : 3)) problems.push('the header or footer was repeated: check the two ---- lines')
+    // a notice whose items each name their pickup library (HOLDDGST) may say it once more per item
+    const perItem = notice.library_per_item && file !== 'sms.txt.tt' ? (notice.items ?? 2) : 0
+    if (count('Riverside Library') > (file === 'sms.txt.tt' ? 1 : 3) + perItem) problems.push('the header or footer was repeated: check the two ---- lines')
     if (/^-{4}/m.test(clean)) problems.push('a ---- line reached the patron')
   }
   if (TRANSPORTS[file].transport === 'sms' && clean.length > 320) problems.push(`SMS is ${clean.length} characters (over 2 parts)`)

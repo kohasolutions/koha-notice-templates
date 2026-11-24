@@ -1,0 +1,59 @@
+{
+  "code": "PREDUEDGST",
+  "module": "circulation",
+  "name": "Due soon reminder (digest)",
+  "menu": "Circulation",
+  "subject": "[% IF checkouts.size == 1 %]1 library item is[% ELSE %][% checkouts.size %] library items are[% END %] due soon",
+  "scenario": "predue_digest",
+  "digest": false,
+  "about": "Sent by advance_notices.pl a chosen number of days before the due date: one message listing every item, to a patron who chose 'Advance notice' with 'Digests only'. Each entry of checkouts is a plain row of the loan, its item and its title (checkout.title, checkout.barcode, checkout.date_due), not a Koha object, so checkout.item or checkout.overdue_fines print nothing here.",
+  "expect": [
+    "Dear Jane",
+    "KNT-ITEM-1",
+    "{DUE}"
+  ],
+  "expect_sms": [
+    "Riverside Library",
+    "{DUE}"
+  ],
+  "cases": [
+    {
+      "name": "one",
+      "expect": [
+        "This item is due soon"
+      ],
+      "expect_sms": [
+        "1 item is"
+      ],
+      "absent": [
+        "KNT-ITEM-2",
+        "KNT-ITEM-3",
+        "items are",
+        "more"
+      ],
+      "subject_starts": "1 library item is",
+      "counts": {
+        "KNT-ITEM-": 1
+      }
+    },
+    {
+      "name": "three",
+      "expect": [
+        "These 3 items are due soon",
+        "KNT-ITEM-2",
+        "KNT-ITEM-3"
+      ],
+      "expect_sms": [
+        "3 items are",
+        "- and 1 more"
+      ],
+      "absent": [
+        "1 item is"
+      ],
+      "subject_starts": "3 library items are",
+      "counts": {
+        "KNT-ITEM-": 3
+      }
+    }
+  ]
+}

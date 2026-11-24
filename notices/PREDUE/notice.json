@@ -6,7 +6,7 @@
   "subject": "Due soon: [% biblio.title | $Remove_MARC_punctuation | trim %]",
   "scenario": "predue",
   "digest": false,
-  "about": "Sent by advance_notices.pl a chosen number of days before the due date, one message per item, to a patron who chose 'Advance notice' without 'Digests only'. Patrons who ticked 'Digests only' get PREDUEDGST instead, which this set does not change.",
+  "about": "Sent by advance_notices.pl a chosen number of days before the due date, one message per item, to a patron who chose 'Advance notice' without 'Digests only'. Patrons who ticked 'Digests only' get PREDUEDGST instead.",
   "expect": [
     "Jane",
     "KNT-ITEM-1",

@@ -12,3 +12,5 @@ a library edits) is a major version: it can break a copy a library has already c
 - HOLD, HOLD_REMINDER (email HTML, email text, SMS, print) and AUTO_RENEWALS (email HTML, email text, SMS). Waiting
   holds are made with Koha's own code; the reminder and the renewals come from Koha's own cron scripts, run inside the
   rolled-back transaction. AUTO_RENEWALS is tested in 13 situations: 3 renewed, 9 not renewed, 1 unknown reason.
+- PREDUEDGST, DUEDGST, HOLDDGST and AUTO_RENEWALS_DGST (email HTML, email text, SMS), for patrons who chose "Digests
+  only", each produced by Koha's own digest code with one item and with several.

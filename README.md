@@ -12,12 +12,16 @@ a real Koha checkout, check-in or slip print before it is published.
 | `CHECKIN` | Circulation | receipt for the items returned in one visit | ✓ | ✓ | ✓ | |
 | `PREDUE` | Circulation | item due soon (one message per item) | ✓ | ✓ | ✓ | |
 | `DUE` | Circulation | item due today (one message per item) | ✓ | ✓ | ✓ | |
+| `PREDUEDGST` | Circulation | items due soon, all in one message (*Digests only*) | ✓ | ✓ | ✓ | |
+| `DUEDGST` | Circulation | items due today, all in one message (*Digests only*) | ✓ | ✓ | ✓ | |
 | `ODUE` | Circulation | first overdue notice, every item of the stage in one message | ✓ | ✓ | ✓ | ✓ |
 | `ODUE2` | Circulation | second overdue notice, firmer | ✓ | ✓ | ✓ | ✓ |
 | `ODUE3` | Circulation | final overdue notice, firmest | ✓ | ✓ | ✓ | ✓ |
 | `HOLD` | Holds | hold ready for pickup, with the deadline and the pickup library | ✓ | ✓ | ✓ | ✓ |
+| `HOLDDGST` | Holds | holds ready for pickup, added to one message (*Digests only*) | ✓ | ✓ | ✓ | |
 | `HOLD_REMINDER` | Holds | holds still waiting, one message per patron and library | ✓ | ✓ | ✓ | ✓ |
 | `AUTO_RENEWALS` | Circulation | automatic renewal result: renewed, or not renewed and why | ✓ | ✓ | ✓ | |
+| `AUTO_RENEWALS_DGST` | Circulation | automatic renewal results, all in one message (*Digests only*) | ✓ | ✓ | ✓ | |
 | `ISSUESLIP` | Circulation | checkout slip for an 80 mm receipt printer | | | | ✓ |
 
 ## Using one
@@ -27,16 +31,15 @@ a real Koha checkout, check-in or slip print before it is published.
    `.html.tt` file and leave it unticked for the `.txt.tt` one.
 3. Change only the values in the **"Your library"** block at the top: the name, logo address, colour and footer line.
 
-CHECKOUT and CHECKIN keep Koha's two `----` lines: Koha repeats the part between them once per item, so one visit
+CHECKOUT, CHECKIN and HOLDDGST keep Koha's two `----` lines: Koha repeats the part between them once per item, so one visit
 sends one message.
 
 Koha ships only `ODUE`: create `ODUE2` and `ODUE3` as new notices, then choose them (and how each is sent) in
 *Tools → Overdue notice/status triggers*. The fines lines appear only when Koha has charged a fine on a listed item.
-Patrons who ticked "Digests only" get `PREDUEDGST` and `DUEDGST` instead of `PREDUE` and `DUE`; those two are not
-in this set.
 
-A patron who ticked *Digests only* for holds or automatic renewals gets Koha's `HOLDDGST` or `AUTO_RENEWALS_DGST`
-instead. Those two are not in this set: such a patron keeps Koha's own wording.
+A patron who ticked *Digests only* gets the notice ending in `DGST` instead of its plain version: install both.
+`HOLDDGST` has two `----` lines like CHECKOUT; its greeting and footer come from the last hold added, so the pickup
+library is named with each item. Its print fallback (a patron with no email address) is the print version of `HOLD`.
 
 ## How the notices are tested
 

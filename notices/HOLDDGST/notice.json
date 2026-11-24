@@ -1,0 +1,52 @@
+{
+  "code": "HOLDDGST",
+  "module": "reserves",
+  "name": "Holds ready for pickup (digest)",
+  "menu": "Holds",
+  "subject": "Reserved for you and ready to collect",
+  "scenario": "hold_digest",
+  "digest": true,
+  "library_per_item": true,
+  "about": "Sent when holds are confirmed as waiting, to a patron who chose 'Hold filled' with 'Digests only'. Koha adds each hold to the message that has not been sent yet: the part between the two ---- lines is repeated once per hold, and the part above and below comes from the last hold. The holds may wait at different libraries, so the pickup library is named with each one. A patron with no email address gets the print version of HOLD instead, one per hold.",
+  "expect": [
+    "Dear Jane",
+    "KNT 1",
+    "1 Main Street"
+  ],
+  "expect_sms": [
+    "Riverside Library: ready to collect"
+  ],
+  "cases": [
+    {
+      "name": "one",
+      "items": 1,
+      "absent": [
+        "Hillside"
+      ],
+      "counts": {
+        "Collect by": 1
+      }
+    },
+    {
+      "name": "three",
+      "items": 3,
+      "counts": {
+        "Collect by": 3
+      },
+      "absent": [
+        "Hillside"
+      ]
+    },
+    {
+      "name": "two_libraries",
+      "items": 2,
+      "expect": [
+        "Hillside Branch, 2 Hill Road",
+        "At Riverside Library"
+      ],
+      "counts": {
+        "Collect by": 2
+      }
+    }
+  ]
+}

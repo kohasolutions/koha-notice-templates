@@ -1,0 +1,8 @@
+[%-
+  # ── Your library: change the value on this line only. ──────────────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+-%]
+[% library_name %]: ready to collect
+----
+- [% hold.biblio.title | $Remove_MARC_punctuation | trim | truncate(40) %][% IF hold.expirationdate %], by [% hold.expirationdate | $KohaDates %][% END %]
+----

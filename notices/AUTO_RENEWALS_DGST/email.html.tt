@@ -1,0 +1,22 @@
+[%-
+  # ── Your library: change the values on these four lines only. ──────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  logo_url     = "";                 # full https:// address of your logo, about 200 x 60 pixels; "" = no logo
+  brand_colour = "#1f4e79";          # your colour, as #rrggbb
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+-%]
+<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1a1a1a;">
+[% IF logo_url %]<img src="[% logo_url %]" alt="[% library_name %]" style="display:block;max-width:220px;max-height:60px;margin:0 0 12px;">[% END %]
+<div style="border-top:4px solid [% brand_colour %];padding-top:12px;">
+<p style="margin:0 0 16px;font-size:20px;font-weight:bold;color:[% brand_colour %];">[% library_name %]</p>
+<p style="margin:0 0 12px;">[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]</p>
+<p style="margin:0 0 12px;">We checked your loans for automatic renewal. [% IF success %]Renewed: [% success %].[% END %][% IF success && error %] [% END %][% IF error %]Not renewed: [% error %].[% END %]</p>
+<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">
+[% FOREACH checkout IN checkouts %][% NEXT IF checkout.auto_renew_error == 'auto_too_soon' %]<tr><td style="padding:10px 0;border-bottom:1px solid #dddddd;"><strong>[% checkout.item.biblio.title | $Remove_MARC_punctuation | trim %]</strong>[% IF checkout.item.biblio.author %]<br>[% checkout.item.biblio.author | $Remove_MARC_punctuation | trim %][% END %]<br><span style="color:#555555;font-size:14px;">Barcode [% checkout.item.barcode %]</span><br>[% IF !checkout.auto_renew_error || checkout.auto_renew_error == 'auto_renew_final' || checkout.auto_renew_error == 'auto_unseen_final' %]Renewed: it is now due on <strong>[% checkout.date_due | $KohaDates as_due_date => 1 %]</strong>.[% IF checkout.auto_renew_error == 'auto_renew_final' %]<br>This was the last automatic renewal: please return it by that date.[% ELSIF checkout.auto_renew_error == 'auto_unseen_final' %]<br>It cannot be renewed automatically again: bring it to the library to renew it.[% END %][% ELSE %]Not renewed. [% IF checkout.auto_renew_error == 'too_many' %]It has been renewed as many times as the library allows.[% ELSIF checkout.auto_renew_error == 'on_reserve' %]Another reader has reserved it.[% ELSIF checkout.auto_renew_error == 'restriction' %]Your account is restricted at the moment.[% ELSIF checkout.auto_renew_error == 'overdue' %]You have overdue items.[% ELSIF checkout.auto_renew_error == 'too_unseen' %]It must be brought to the library to be renewed again.[% ELSIF checkout.auto_renew_error == 'auto_account_expired' %]Your library membership has expired.[% ELSIF checkout.auto_renew_error == 'auto_too_late' %]It has reached the longest time it can be on loan.[% ELSIF checkout.auto_renew_error == 'auto_too_much_owing' %]You owe more in charges than the library allows.[% ELSIF checkout.auto_renew_error == 'item_denied_renewal' %]This item cannot be renewed.[% ELSE %]Please ask the library for the reason.[% END %]<br>[% IF checkout.is_overdue %]It was due on <strong>[% checkout.date_due | $KohaDates as_due_date => 1 %]</strong>. Please return it as soon as you can.[% ELSE %]Please return it by <strong>[% checkout.date_due | $KohaDates as_due_date => 1 %]</strong>.[% END %][% END %]</td></tr>
+[% END %]</table>
+[% IF Koha.Preference('OPACBaseURL') %]<p style="margin:0 0 12px;">See your loans online: <a href="[% Koha.Preference('OPACBaseURL') %]/cgi-bin/koha/opac-user.pl" style="color:[% brand_colour %];">your library account</a>.</p>[% END %]
+<p style="margin:0 0 12px;">Thank you,<br>[% library_name %]</p>
+[% IF footer_note %]<p style="margin:0;font-size:13px;color:#555555;">[% footer_note %]</p>[% END %]
+</div>
+</div>
