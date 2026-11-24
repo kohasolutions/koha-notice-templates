@@ -679,6 +679,8 @@ sub scenario_auto_renewals_digest {
     } else {
         $out->{must} = [ map { shown_date( $_->date_due ) } grep { ( $_->auto_renew_error // '' ) ne 'auto_too_soon' } @loans ];
     }
+    return $out;
+}
 
 # ── membership notices ───────────────────────────────────────────────────────────────────────────────────────────
 # WELCOME by email: Koha's own patron import creates the patron and queues the notice. The print version exists in
