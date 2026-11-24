@@ -36,5 +36,8 @@
       ]
     }
   ],
-  "print_as": "print"
+  "print_as": "print",
+  "previews": [
+    "three"
+  ]
 }
