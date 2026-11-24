@@ -1,0 +1,247 @@
+{
+  "code": "AUTO_RENEWALS",
+  "module": "circulation",
+  "name": "Automatic renewal result",
+  "menu": "Circulation",
+  "subject": "[% IF checkout.auto_renew_error && !checkout.auto_renew_error.match('final$') %]Not renewed[% ELSE %]Renewed[% END %]: [% biblio.title | $Remove_MARC_punctuation | trim %]",
+  "scenario": "auto_renewals",
+  "digest": false,
+  "about": "Sent by the cron script misc/cronjobs/automatic_renewals.pl, one message per item, when the result changed since the last run. It goes to a patron who chose 'Auto renewal' in their messaging preferences (or to everyone by email, depending on the AutoRenewalNotices system preference). A patron who ticked 'Digests only' gets AUTO_RENEWALS_DGST instead.",
+  "expect": [
+    "Dear Jane",
+    "KNT-ITEM-1",
+    "Riverside Library"
+  ],
+  "expectByFile": {
+    "sms.txt.tt": [
+      "Riverside Library: we"
+    ]
+  },
+  "cases": [
+    {
+      "name": "renewed",
+      "expect": [
+        "It is now due on"
+      ],
+      "reject": [
+        "could not renew",
+        "last automatic",
+        "automatically again"
+      ],
+      "subject": "Renewed: "
+    },
+    {
+      "name": "auto_renew_final",
+      "expect": [
+        "It is now due on",
+        "This was the last automatic renewal: please return it by that date."
+      ],
+      "reject": [
+        "could not renew"
+      ],
+      "subject": "Renewed: "
+    },
+    {
+      "name": "auto_unseen_final",
+      "expect": [
+        "It is now due on",
+        "It cannot be renewed automatically again: bring it to the library to renew it."
+      ],
+      "reject": [
+        "could not renew"
+      ],
+      "subject": "Renewed: "
+    },
+    {
+      "name": "too_many",
+      "expect": [
+        "could not renew",
+        "It has been renewed as many times as the library allows."
+      ],
+      "reject": [
+        "It is now due on",
+        "Please ask the library for the reason.",
+        "Another reader has reserved it.",
+        "Your account is restricted at the moment.",
+        "You have overdue items.",
+        "It must be brought to the library to be renewed again.",
+        "Your library membership has expired.",
+        "It has reached the longest time it can be on loan.",
+        "You owe more in charges than the library allows.",
+        "This item cannot be renewed."
+      ],
+      "subject": "Not renewed: "
+    },
+    {
+      "name": "on_reserve",
+      "expect": [
+        "could not renew",
+        "Another reader has reserved it."
+      ],
+      "reject": [
+        "It is now due on",
+        "Please ask the library for the reason.",
+        "It has been renewed as many times as the library allows.",
+        "Your account is restricted at the moment.",
+        "You have overdue items.",
+        "It must be brought to the library to be renewed again.",
+        "Your library membership has expired.",
+        "It has reached the longest time it can be on loan.",
+        "You owe more in charges than the library allows.",
+        "This item cannot be renewed."
+      ],
+      "subject": "Not renewed: "
+    },
+    {
+      "name": "restriction",
+      "expect": [
+        "could not renew",
+        "Your account is restricted at the moment."
+      ],
+      "reject": [
+        "It is now due on",
+        "Please ask the library for the reason.",
+        "It has been renewed as many times as the library allows.",
+        "Another reader has reserved it.",
+        "You have overdue items.",
+        "It must be brought to the library to be renewed again.",
+        "Your library membership has expired.",
+        "It has reached the longest time it can be on loan.",
+        "You owe more in charges than the library allows.",
+        "This item cannot be renewed."
+      ],
+      "subject": "Not renewed: "
+    },
+    {
+      "name": "overdue",
+      "expect": [
+        "could not renew",
+        "You have overdue items."
+      ],
+      "reject": [
+        "It is now due on",
+        "Please ask the library for the reason.",
+        "It has been renewed as many times as the library allows.",
+        "Another reader has reserved it.",
+        "Your account is restricted at the moment.",
+        "It must be brought to the library to be renewed again.",
+        "Your library membership has expired.",
+        "It has reached the longest time it can be on loan.",
+        "You owe more in charges than the library allows.",
+        "This item cannot be renewed."
+      ],
+      "subject": "Not renewed: "
+    },
+    {
+      "name": "too_unseen",
+      "expect": [
+        "could not renew",
+        "It must be brought to the library to be renewed again."
+      ],
+      "reject": [
+        "It is now due on",
+        "Please ask the library for the reason.",
+        "It has been renewed as many times as the library allows.",
+        "Another reader has reserved it.",
+        "Your account is restricted at the moment.",
+        "You have overdue items.",
+        "Your library membership has expired.",
+        "It has reached the longest time it can be on loan.",
+        "You owe more in charges than the library allows.",
+        "This item cannot be renewed."
+      ],
+      "subject": "Not renewed: "
+    },
+    {
+      "name": "auto_account_expired",
+      "expect": [
+        "could not renew",
+        "Your library membership has expired."
+      ],
+      "reject": [
+        "It is now due on",
+        "Please ask the library for the reason.",
+        "It has been renewed as many times as the library allows.",
+        "Another reader has reserved it.",
+        "Your account is restricted at the moment.",
+        "You have overdue items.",
+        "It must be brought to the library to be renewed again.",
+        "It has reached the longest time it can be on loan.",
+        "You owe more in charges than the library allows.",
+        "This item cannot be renewed."
+      ],
+      "subject": "Not renewed: "
+    },
+    {
+      "name": "auto_too_late",
+      "expect": [
+        "could not renew",
+        "It has reached the longest time it can be on loan."
+      ],
+      "reject": [
+        "It is now due on",
+        "Please ask the library for the reason.",
+        "It has been renewed as many times as the library allows.",
+        "Another reader has reserved it.",
+        "Your account is restricted at the moment.",
+        "You have overdue items.",
+        "It must be brought to the library to be renewed again.",
+        "Your library membership has expired.",
+        "You owe more in charges than the library allows.",
+        "This item cannot be renewed."
+      ],
+      "subject": "Not renewed: "
+    },
+    {
+      "name": "auto_too_much_owing",
+      "expect": [
+        "could not renew",
+        "You owe more in charges than the library allows."
+      ],
+      "reject": [
+        "It is now due on",
+        "Please ask the library for the reason.",
+        "It has been renewed as many times as the library allows.",
+        "Another reader has reserved it.",
+        "Your account is restricted at the moment.",
+        "You have overdue items.",
+        "It must be brought to the library to be renewed again.",
+        "Your library membership has expired.",
+        "It has reached the longest time it can be on loan.",
+        "This item cannot be renewed."
+      ],
+      "subject": "Not renewed: "
+    },
+    {
+      "name": "item_denied_renewal",
+      "expect": [
+        "could not renew",
+        "This item cannot be renewed."
+      ],
+      "reject": [
+        "It is now due on",
+        "Please ask the library for the reason.",
+        "It has been renewed as many times as the library allows.",
+        "Another reader has reserved it.",
+        "Your account is restricted at the moment.",
+        "You have overdue items.",
+        "It must be brought to the library to be renewed again.",
+        "Your library membership has expired.",
+        "It has reached the longest time it can be on loan.",
+        "You owe more in charges than the library allows."
+      ],
+      "subject": "Not renewed: "
+    },
+    {
+      "name": "unknown_reason",
+      "expect": [
+        "could not renew",
+        "Please ask the library for the reason."
+      ],
+      "reject": [
+        "It is now due on"
+      ],
+      "subject": "Not renewed: "
+    }
+  ]
+}

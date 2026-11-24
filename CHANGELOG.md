@@ -7,3 +7,6 @@ a library edits) is a major version: it can break a copy a library has already c
 
 - CHECKOUT, CHECKIN (email HTML, email text, SMS) and ISSUESLIP (80 mm receipt printer), each run through a real
   Koha checkout, check-in or slip print by `tools/render.mjs`.
+- HOLD, HOLD_REMINDER (email HTML, email text, SMS, print) and AUTO_RENEWALS (email HTML, email text, SMS). Waiting
+  holds are made with Koha's own code; the reminder and the renewals come from Koha's own cron scripts, run inside the
+  rolled-back transaction. AUTO_RENEWALS is tested in 13 situations: 3 renewed, 9 not renewed, 1 unknown reason.

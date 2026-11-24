@@ -1,0 +1,38 @@
+[%-
+  # ── Your library: change the values on these two lines only. ───────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+-%]
+[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]
+
+[% IF holds.count == 1 %]An item you reserved is[% ELSE %][% holds.count %] items you reserved are[% END %] still waiting for you at [% branch.branchname %].
+[% FOREACH hold IN holds %]
+* [% hold.biblio.title | $Remove_MARC_punctuation | trim %][% IF hold.biblio.author %], [% hold.biblio.author | $Remove_MARC_punctuation | trim %][% END %]
+  Waiting since [% hold.waitingdate | $KohaDates %][% IF hold.expirationdate %] · Collect by [% hold.expirationdate | $KohaDates %][% END %]
+[% END %]
+Collect from:
+  [% branch.branchname %]
+[% IF branch.branchaddress1 -%]
+  [% branch.branchaddress1 %]
+[% END -%]
+[% IF branch.branchaddress2 -%]
+  [% branch.branchaddress2 %]
+[% END -%]
+[% IF branch.branchaddress3 -%]
+  [% branch.branchaddress3 %]
+[% END -%]
+[% IF branch.branchcity -%]
+  [% branch.branchcity %][% IF branch.branchzip %] [% branch.branchzip %][% END %]
+[% END -%]
+[% IF branch.branchphone -%]
+  Phone [% branch.branchphone %]
+[% END -%]
+
+[% IF Koha.Preference('OPACBaseURL') -%]
+If you no longer need an item, please cancel it so that the next reader can have it: [% Koha.Preference('OPACBaseURL') %]/cgi-bin/koha/opac-user.pl
+
+[% END -%]
+Thank you,
+[% library_name %]
+[% IF footer_note %][% footer_note %][% END %]

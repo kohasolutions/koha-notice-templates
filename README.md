@@ -10,6 +10,9 @@ a real Koha checkout, check-in or slip print before it is published.
 |---|---|---|---|---|---|---|
 | `CHECKOUT` | Circulation | receipt for the items borrowed in one visit | ✓ | ✓ | ✓ | |
 | `CHECKIN` | Circulation | receipt for the items returned in one visit | ✓ | ✓ | ✓ | |
+| `HOLD` | Holds | hold ready for pickup, with the deadline and the pickup library | ✓ | ✓ | ✓ | ✓ |
+| `HOLD_REMINDER` | Holds | holds still waiting, one message per patron and library | ✓ | ✓ | ✓ | ✓ |
+| `AUTO_RENEWALS` | Circulation | automatic renewal result: renewed, or not renewed and why | ✓ | ✓ | ✓ | |
 | `ISSUESLIP` | Circulation | checkout slip for an 80 mm receipt printer | | | | ✓ |
 
 ## Using one
@@ -21,6 +24,9 @@ a real Koha checkout, check-in or slip print before it is published.
 
 CHECKOUT and CHECKIN keep Koha's two `----` lines: Koha repeats the part between them once per item, so one visit
 sends one message.
+
+A patron who ticked *Digests only* for holds or automatic renewals gets Koha's `HOLDDGST` or `AUTO_RENEWALS_DGST`
+instead. Those two are not in this set: such a patron keeps Koha's own wording.
 
 ## How the notices are tested
 

@@ -46,7 +46,12 @@ export function unmark(s) {
   return s.split(OPEN).join('').split(CLOSE).join('')
 }
 
-export function checkOutput(notice, file, out) {
+/** A notice that says different things in different situations lists them as "cases"; the others have one. */
+export function casesOf(notice) {
+  return notice.cases ?? [{ name: '' }]
+}
+
+export function checkOutput(notice, file, out, kase = {}) {
   const problems = []
   const content = out.content ?? ''
   const subject = out.subject ?? ''
@@ -63,6 +68,12 @@ export function checkOutput(notice, file, out) {
   } else {
     for (const e of notice.expect ?? []) if (!clean.includes(e)) problems.push(`expected "${e}" in the output`)
   }
+  for (const e of [...(notice.expectByFile?.[file] ?? []), ...(kase.expect ?? []), ...(out.must ?? [])])
+    if (!clean.toLowerCase().includes(e.toLowerCase())) problems.push(`expected "${e}" in the output`)
+  if (kase.subject && TRANSPORTS[file].transport === 'email' && !unmark(subject).startsWith(kase.subject))
+    problems.push(`the subject should start with "${kase.subject}"`)
+  for (const e of kase.reject ?? [])
+    if (clean.toLowerCase().includes(e.toLowerCase())) problems.push(`"${e}" does not belong in this case`)
   if (notice.digest) {
     // One message for the visit: the greeting (header) once, and the footer once, whatever the item count.
     const count = (s) => clean.split(s).length - 1
@@ -108,7 +119,7 @@ async function main() {
   const jobs = []
   for (const n of notices)
     for (const f of n.files)
-      jobs.push({
+      for (const kase of casesOf(n)) jobs.push({
         code: n.code,
         module: n.module,
         file: f,
@@ -117,6 +128,7 @@ async function main() {
         title: markValues(n.subject),
         content: markValues(readFileSync(join(n.dir, f), 'utf8')),
         scenario: n.scenario,
+        case: kase.name,
       })
   const res = runKoha(jobs)
   if (res.leaked?.length) {
@@ -128,17 +140,19 @@ async function main() {
   res.results.forEach((r, i) => {
     const job = jobs[i]
     const notice = notices.find((n) => n.code === job.code)
-    const problems = r.ok ? checkOutput(notice, job.file, r) : [`Koha: ${r.error}`]
+    const kase = casesOf(notice).find((k) => k.name === job.case)
+    const base = job.case ? `${job.case}.${job.file}` : job.file
+    const problems = r.ok ? checkOutput(notice, job.file, r, kase) : [`Koha: ${r.error}`]
     const outDir = join(ROOT, 'out', job.code)
     mkdirSync(outDir, { recursive: true })
     if (r.ok) {
-      writeFileSync(join(outDir, job.file.replace(/\.tt$/, '')), unmark(r.content))
-      writeFileSync(join(outDir, job.file.replace(/\.tt$/, '.subject.txt')), unmark(r.subject ?? '') + '\n')
+      writeFileSync(join(outDir, base.replace(/\.tt$/, '')), unmark(r.content))
+      writeFileSync(join(outDir, base.replace(/\.tt$/, '.subject.txt')), unmark(r.subject ?? '') + '\n')
     }
     const ok = problems.length === 0
     if (!ok) failed++
-    console.log(`${ok ? 'ok  ' : 'FAIL'} ${job.code} ${job.file}${ok ? '' : '\n       ' + problems.join('\n       ')}`)
-    summary.push({ code: job.code, file: job.file, ok, problems, sample: r.sample ?? null })
+    console.log(`${ok ? 'ok  ' : 'FAIL'} ${job.code} ${base}${ok ? '' : '\n       ' + problems.join('\n       ')}`)
+    summary.push({ code: job.code, file: job.file, case: job.case, ok, problems, sample: r.sample ?? null })
   })
   writeFileSync(join(ROOT, 'out', 'results.json'), JSON.stringify({ koha: res.koha, at: new Date().toISOString(), results: summary }, null, 2) + '\n')
   console.log(`\nKoha ${res.koha}: ${summary.length - failed} of ${summary.length} passed`)

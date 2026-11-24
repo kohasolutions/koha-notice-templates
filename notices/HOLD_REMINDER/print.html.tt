@@ -1,0 +1,27 @@
+[%-
+  # ── Your library: change the values on these four lines only. ──────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+  logo_url     = "";                 # full https:// address of your logo, about 200 x 60 pixels; "" = no logo
+  brand_colour = "#1f4e79";          # your colour, as #rrggbb
+  footer_note  = "";                 # one line under the signature, e.g. your opening hours; "" = none
+  USE Koha;
+-%]
+<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1a1a1a;">
+[% IF logo_url %]<img src="[% logo_url %]" alt="[% library_name %]" style="display:block;max-width:220px;max-height:60px;margin:0 0 12px;">[% END %]
+<div style="border-top:4px solid [% brand_colour %];padding-top:12px;">
+<p style="margin:0 0 16px;font-size:20px;font-weight:bold;color:[% brand_colour %];">[% library_name %]</p>
+<p style="margin:0 0 16px;">[% borrower.firstname %] [% borrower.surname %][% IF borrower.address %]<br>[% borrower.address %][% END %][% IF borrower.address2 %]<br>[% borrower.address2 %][% END %][% IF borrower.city %]<br>[% borrower.city %][% IF borrower.zipcode %] [% borrower.zipcode %][% END %][% END %][% IF borrower.country %]<br>[% borrower.country %][% END %]</p>
+<p style="margin:0 0 12px;">[% today | $KohaDates %]</p>
+<p style="margin:0 0 12px;">[% IF borrower.firstname %]Dear [% borrower.firstname %],[% ELSE %]Hello,[% END %]</p>
+<p style="margin:0 0 12px;">[% IF holds.count == 1 %]An item you reserved is[% ELSE %][% holds.count %] items you reserved are[% END %] still waiting for you at [% branch.branchname %].</p>
+<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">
+[% FOREACH hold IN holds %]
+<tr><td style="padding:10px 0;border-bottom:1px solid #dddddd;"><strong>[% hold.biblio.title | $Remove_MARC_punctuation | trim %]</strong>[% IF hold.biblio.author %]<br>[% hold.biblio.author | $Remove_MARC_punctuation | trim %][% END %]<br><span style="color:#555555;font-size:14px;">Waiting since [% hold.waitingdate | $KohaDates %][% IF hold.expirationdate %] · Collect by <strong>[% hold.expirationdate | $KohaDates %]</strong>[% END %]</span></td></tr>
+[% END %]
+</table>
+<p style="margin:0 0 12px;">Collect from:<br><strong>[% branch.branchname %]</strong>[% IF branch.branchaddress1 %]<br>[% branch.branchaddress1 %][% END %][% IF branch.branchaddress2 %]<br>[% branch.branchaddress2 %][% END %][% IF branch.branchaddress3 %]<br>[% branch.branchaddress3 %][% END %][% IF branch.branchcity %]<br>[% branch.branchcity %][% IF branch.branchzip %] [% branch.branchzip %][% END %][% END %][% IF branch.branchphone %]<br>Phone [% branch.branchphone %][% END %]</p>
+<p style="margin:0 0 12px;">If you no longer need an item, please tell us so that the next reader can have it.</p>
+<p style="margin:0 0 12px;">Thank you,<br>[% library_name %]</p>
+[% IF footer_note %]<p style="margin:0;font-size:13px;color:#555555;">[% footer_note %]</p>[% END %]
+</div>
+</div>
