@@ -75,14 +75,14 @@ test("lint allows the library's own logo_url", () => {
 const overdue = {
   code: 'ODUE', digest: false, scenario: 'overdue1', expect: ['KNT-ITEM-1', '{DUE}'], expect_sms: ['{DUE}'], absent: ['KNT-ITEM-3'],
   cases: [
-    { name: 'no-fine', scenario: 'overdue1', absent: ['Fine so far'] },
+    { name: 'no_fine', scenario: 'overdue1', absent: ['Fine so far'] },
     { name: 'fine', scenario: 'overdue1:fine', expect: ['Fine so far $2.50'], counts: { 'Fine so far': 1 } },
   ],
 }
 
 test('casesOf runs a notice once per situation, adding to the notice’s own expectations; the first keeps the plain name', () => {
   const [a, b] = casesOf(overdue)
-  assert.deepEqual([a.case, b.case], [null, 'fine'])
+  assert.deepEqual([a.case, b.case, a.plain, b.plain], ['no_fine', 'fine', true, false])
   assert.equal(b.scenario, 'overdue1:fine')
   assert.deepEqual(b.expect, ['KNT-ITEM-1', '{DUE}', 'Fine so far $2.50'])
   assert.deepEqual(a.absent, ['KNT-ITEM-3', 'Fine so far'])
@@ -105,4 +105,29 @@ test('an SMS must carry the due date, and an item that is not due must not appea
   const [n] = casesOf(overdue)
   assert.ok(checkOutput(n, 'sms.txt.tt', { content: 'Lib: overdue', subject: '', due: '11/16/2026' }).some((x) => x.includes('in the SMS')))
   assert.ok(checkOutput(n, 'sms.txt.tt', { content: 'due 11/16/2026 KNT-ITEM-3', subject: '', due: '11/16/2026' }).some((x) => x.includes('KNT-ITEM-3')))
+})
+
+const sometimes = { code: 'X', digest: false, expect: ['A'], expectByFile: { 'sms.txt.tt': ['Lib'] } }
+const kase = { name: 'renewed', subject_starts: 'Renewed: ', expect_all: ['It is now due'], absent: ['could not renew'] }
+
+test('checkOutput checks a case: its text, the text of another case, its subject and what Koha says must be there', () => {
+  const good = { content: 'A. It is now due on 1 May', subject: 'Renewed: Book', must: ['1 May'] }
+  assert.deepEqual(checkOutput(casesOf({ ...sometimes, cases: [kase] })[0], 'email.txt.tt', good), [])
+  const p = checkOutput(casesOf({ ...sometimes, cases: [kase] })[0], 'email.txt.tt', { content: 'A. Could not renew', subject: 'Not renewed: Book', must: ['1 May'] })
+  for (const want of ['expected "It is now due"', 'expected "1 May"', 'must not be in the output', 'subject should start'])
+    assert.ok(p.some((x) => x.includes(want)), want)
+})
+
+test('checkOutput reads expectByFile for that file only', () => {
+  assert.ok(checkOutput(sometimes, 'sms.txt.tt', { content: 'x', subject: '' }).some((x) => x.includes('"Lib"')))
+  assert.deepEqual(checkOutput(sometimes, 'email.txt.tt', { content: 'A', subject: '' }), [])
+})
+
+test('lint catches a subject Koha would not store, and cases with no name or the same name', () => {
+  const files = { 'email.txt.tt': BLOCK + 'x' }
+  const m = { ...meta, digest: false }
+  assert.deepEqual(problemsOf('CHECKOUT', { ...m, cases: [kase] }, files), [])
+  assert.ok(problemsOf('CHECKOUT', { ...m, subject: 'x'.repeat(191) }, files).some((x) => x.includes('Koha keeps 200')))
+  assert.ok(problemsOf('CHECKOUT', { ...m, cases: [kase, kase] }, files).some((x) => x.includes('same name')))
+  assert.ok(problemsOf('CHECKOUT', { ...m, cases: [{}] }, files).some((x) => x.includes('lower-case name')))
 })

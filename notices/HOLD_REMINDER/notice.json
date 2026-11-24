@@ -1,0 +1,40 @@
+{
+  "code": "HOLD_REMINDER",
+  "module": "reserves",
+  "name": "Holds still waiting",
+  "menu": "Holds",
+  "subject": "Still waiting for you at [% branch.branchname %]",
+  "scenario": "hold_reminder",
+  "digest": false,
+  "about": "Sent by the cron script misc/cronjobs/holds/holds_reminder.pl to a patron who chose 'Hold reminder': one message per patron and pickup library, listing every waiting hold. Koha has no print version of its own, but falls back to print when the patron has no email address or SMS number, so this set includes one.",
+  "expect": [
+    "Dear Jane",
+    "Riverside Library",
+    "1 Main Street"
+  ],
+  "expectByFile": {
+    "print.html.tt": [
+      "Jane Reader",
+      "7 Elm Road"
+    ],
+    "sms.txt.tt": [
+      "Riverside Library: still waiting"
+    ]
+  },
+  "cases": [
+    {
+      "name": "one",
+      "absent": [
+        "items you reserved",
+        "and 1 more"
+      ]
+    },
+    {
+      "name": "three",
+      "absent": [
+        "An item you reserved"
+      ]
+    }
+  ],
+  "print_as": "print"
+}

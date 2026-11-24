@@ -1,0 +1,13 @@
+[%-
+  # ── Your library: change the value on this line only. ──────────────────────────────────────────────────
+  library_name = branch.branchname;  # leave it like this to use the library name you have in Koha
+-%]
+[% library_name %]: still waiting for you
+[% FOREACH hold IN holds -%]
+[% IF loop.index < 2 -%]
+- [% hold.biblio.title | $Remove_MARC_punctuation | trim | truncate(40) %][% IF hold.expirationdate %], collect by [% hold.expirationdate | $KohaDates %][% END %]
+[% END -%]
+[% END -%]
+[% IF holds.count > 2 -%]
+and [% holds.count - 2 %] more
+[% END -%]

@@ -23,6 +23,11 @@ export function problemsOf(code, meta, files) {
   const p = []
   for (const k of REQUIRED) if (!(k in meta)) p.push(`notice.json has no "${k}"`)
   if (meta.code !== code) p.push(`notice.json says code "${meta.code}", the folder is "${code}"`)
+  // Koha keeps a subject in 200 characters; the live test adds markers to it
+  if ((meta.subject ?? '').length > 190) p.push(`the subject is ${meta.subject.length} characters; Koha keeps 200`)
+  const names = (meta.cases ?? []).map((c) => c.name)
+  if (names.some((n) => !/^[a-z_]+$/.test(n ?? ''))) p.push('every case in notice.json needs a lower-case name')
+  if (new Set(names).size !== names.length) p.push('two cases in notice.json have the same name')
   const tts = Object.keys(files)
   if (!tts.length) p.push('no template (email.html.tt, email.txt.tt, sms.txt.tt or print.html.tt)')
   for (const [f, text] of Object.entries(files)) {

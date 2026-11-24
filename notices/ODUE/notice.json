@@ -19,18 +19,16 @@
     "- ",
     "was due {DUE}"
   ],
-  "absent": [
-    "KNT-ITEM-3"
-  ],
   "cases": [
     {
-      "name": "no-fine",
+      "name": "no_fine",
       "scenario": "overdue1",
       "expect": [],
       "absent": [
         "Fine so far",
         "Fines",
-        "restricted"
+        "restricted",
+        "KNT-ITEM-3"
       ]
     },
     {
@@ -45,7 +43,8 @@
       ],
       "absent": [
         "restricted",
-        "0.00"
+        "0.00",
+        "KNT-ITEM-3"
       ],
       "counts": {
         "Fine so far": 1
@@ -59,7 +58,21 @@
       ],
       "absent": [
         "Fine so far",
-        "Fines"
+        "Fines",
+        "KNT-ITEM-3"
+      ]
+    },
+    {
+      "name": "many",
+      "scenario": "overdue1:many",
+      "expect": [
+        "KNT-ITEM-3"
+      ],
+      "expect_sms": [
+        "- and 1 more"
+      ],
+      "absent": [
+        "Fine so far"
       ]
     }
   ]

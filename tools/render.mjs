@@ -48,14 +48,17 @@ export function unmark(s) {
 
 /** One notice, several situations (with a fine, without one…): each case is the notice plus its own expectations. */
 export function casesOf(notice) {
-  if (!notice.cases?.length) return [{ ...notice, case: null }]
+  if (!notice.cases?.length) return [{ ...notice, case: '', plain: true }]
   return notice.cases.map((c, i) => ({
     ...notice,
-    scenario: c.scenario,
-    case: i === 0 ? null : c.name,
+    scenario: c.scenario ?? notice.scenario,
+    case: c.name,
+    plain: i === 0, // the first case's output keeps the plain file name
     expect: [...(notice.expect ?? []), ...(c.expect ?? [])],
     expect_sms: [...(notice.expect_sms ?? []), ...(c.expect_sms ?? [])],
     absent: [...(notice.absent ?? []), ...(c.absent ?? [])],
+    expect_all: c.expect_all ?? [],
+    subject_starts: c.subject_starts,
     counts: c.counts ?? {},
   }))
 }
@@ -83,7 +86,12 @@ export function checkOutput(notice, file, out) {
     for (const [t, n] of Object.entries(notice.counts ?? {}))
       if (clean.split(t).length - 1 !== n) problems.push(`"${t}" appears ${clean.split(t).length - 1} times, expected ${n}`)
   }
-  for (const a of notice.absent ?? []) if (clean.includes(a)) problems.push(`"${a}" must not be in the output`)
+  // every format, whatever the capitals: text that opens a sentence in one format sits inside one in another
+  for (const e of [...(notice.expectByFile?.[file] ?? []), ...(notice.expect_all ?? []), ...(out.must ?? [])])
+    if (!clean.toLowerCase().includes(e.toLowerCase())) problems.push(`expected "${e}" in the output`)
+  if (notice.subject_starts && TRANSPORTS[file].transport === 'email' && !unmark(subject).startsWith(notice.subject_starts))
+    problems.push(`the subject should start with "${notice.subject_starts}"`)
+  for (const a of notice.absent ?? []) if (clean.toLowerCase().includes(a.toLowerCase())) problems.push(`"${a}" must not be in the output`)
   if (notice.digest) {
     // One message for the visit: the greeting (header) once, and the footer once, whatever the item count.
     const count = (s) => clean.split(s).length - 1
@@ -112,14 +120,18 @@ function runKoha(jobs) {
   const script = join(ROOT, 'tools', 'koha-render.pl')
   const remote = `/tmp/koha-render-${process.pid}.pl` // its own name: two runs may share a container
   execFileSync('docker', ['cp', script, `${CONTAINER}:${remote}`])
-  const out = execFileSync(
-    'docker',
-    // koha-shell starts a new login shell as the instance user, which drops the caller's environment: the variable
-    // must be set INSIDE the command. koha-render.pl refuses to run without it.
-    ['exec', '-i', CONTAINER, 'koha-shell', INSTANCE, '-c', `cd /tmp && KOHA_TESTING=1 perl ${remote}`],
-    { input: JSON.stringify({ notices: jobs.map(({ notice, ...j }) => j) }), maxBuffer: 64 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] },
-  ).toString('utf8')
-  return JSON.parse(out.slice(out.indexOf('{')))
+  try {
+    const out = execFileSync(
+      'docker',
+      // koha-shell starts a new login shell as the instance user, which drops the caller's environment: the variable
+      // must be set INSIDE the command. koha-render.pl refuses to run without it.
+      ['exec', '-i', CONTAINER, 'koha-shell', INSTANCE, '-c', `cd /tmp && KOHA_TESTING=1 perl ${remote}`],
+      { input: JSON.stringify({ notices: jobs.map(({ notice, ...j }) => j) }), maxBuffer: 64 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] },
+    ).toString('utf8')
+    return JSON.parse(out.slice(out.indexOf('{')))
+  } finally {
+    execFileSync('docker', ['exec', CONTAINER, 'rm', '-f', remote])
+  }
 }
 
 async function main() {
@@ -139,6 +151,7 @@ async function main() {
         content: markValues(readFileSync(join(n.dir, f), 'utf8')),
         scenario: n.scenario,
         print_as: n.print_as,
+        case: n.case,
         notice: n,
       })
   const res = runKoha(jobs)
@@ -151,7 +164,7 @@ async function main() {
   res.results.forEach((r, i) => {
     const job = jobs[i]
     const notice = job.notice
-    const base = job.file.replace(/\.tt$/, '').replace(/\.(\w+)$/, notice.case ? `.${notice.case}.$1` : '.$1')
+    const base = job.file.replace(/\.tt$/, '').replace(/\.(\w+)$/, notice.plain ? '.$1' : `.${notice.case}.$1`)
     const problems = r.ok ? checkOutput(notice, job.file, r) : [`Koha: ${r.error}`]
     const outDir = join(ROOT, 'out', job.code)
     mkdirSync(outDir, { recursive: true })
