@@ -102,6 +102,9 @@ message, restores, and compares every table of the database with how it was.
 These notices were checked on Koha 26.05.02 only. Nothing here was run on another release: on an older Koha, try
 one notice on a test patron before relying on it.
 
+Mail apps: the emails Koha produced were opened in Gmail and looked right. They have not yet been checked in
+Outlook; if one looks wrong there, please [open an issue](https://github.com/kohasolutions/koha-notice-templates/issues).
+
 ## Related
 
 - [Koha notices and slips](https://kohasolutions.com/knowledge-base/koha-notices-and-slips): how the notice editor

@@ -5,7 +5,8 @@ a library edits) is a major version: it can break a copy a library has already c
 
 ## 1.0.0 (2026-11-25)
 
-First release: 18 notices, 159 of 159 checks passed on Koha 26.05.02.
+First release: 18 notices, 159 of 159 checks passed on Koha 26.05.02. The emails were checked in Gmail; Outlook is
+not checked yet.
 
 - CHECKOUT, CHECKIN (email HTML, email text, SMS) and ISSUESLIP (80 mm receipt printer), each run through a real
   Koha checkout, check-in or slip print by `tools/render.mjs`.
