@@ -1,0 +1,217 @@
+koha-notice-templates ed9fb73 · ed9fb732b2695049c8fe485b7484e532b2b09f19
+Run on 2026-11-25T13:57:57Z, Linux 7.0.0-43-generic, node v24.4.1
+
+== Unit tests
+ℹ tests 56
+ℹ pass 56
+ℹ fail 0
+
+== Layout
+[lint] 18 notices, 0 with problems; Template Toolkit parse skipped (install libtemplate-perl).
+[variables] 18 notices, 0 problem(s)
+
+== Every notice through Koha (tools/render.mjs)
+ok   AUTO_RENEWALS email.html.tt (renewed)
+ok   AUTO_RENEWALS email.txt.tt (renewed)
+ok   AUTO_RENEWALS sms.txt.tt (renewed)
+ok   AUTO_RENEWALS email.html.tt (auto_renew_final)
+ok   AUTO_RENEWALS email.txt.tt (auto_renew_final)
+ok   AUTO_RENEWALS sms.txt.tt (auto_renew_final)
+ok   AUTO_RENEWALS email.html.tt (auto_unseen_final)
+ok   AUTO_RENEWALS email.txt.tt (auto_unseen_final)
+ok   AUTO_RENEWALS sms.txt.tt (auto_unseen_final)
+ok   AUTO_RENEWALS email.html.tt (too_many)
+ok   AUTO_RENEWALS email.txt.tt (too_many)
+ok   AUTO_RENEWALS sms.txt.tt (too_many)
+ok   AUTO_RENEWALS email.html.tt (on_reserve)
+ok   AUTO_RENEWALS email.txt.tt (on_reserve)
+ok   AUTO_RENEWALS sms.txt.tt (on_reserve)
+ok   AUTO_RENEWALS email.html.tt (restriction)
+ok   AUTO_RENEWALS email.txt.tt (restriction)
+ok   AUTO_RENEWALS sms.txt.tt (restriction)
+ok   AUTO_RENEWALS email.html.tt (overdue)
+ok   AUTO_RENEWALS email.txt.tt (overdue)
+ok   AUTO_RENEWALS sms.txt.tt (overdue)
+ok   AUTO_RENEWALS email.html.tt (too_unseen)
+ok   AUTO_RENEWALS email.txt.tt (too_unseen)
+ok   AUTO_RENEWALS sms.txt.tt (too_unseen)
+ok   AUTO_RENEWALS email.html.tt (auto_account_expired)
+ok   AUTO_RENEWALS email.txt.tt (auto_account_expired)
+ok   AUTO_RENEWALS sms.txt.tt (auto_account_expired)
+ok   AUTO_RENEWALS email.html.tt (auto_too_late)
+ok   AUTO_RENEWALS email.txt.tt (auto_too_late)
+ok   AUTO_RENEWALS sms.txt.tt (auto_too_late)
+ok   AUTO_RENEWALS email.html.tt (auto_too_much_owing)
+ok   AUTO_RENEWALS email.txt.tt (auto_too_much_owing)
+ok   AUTO_RENEWALS sms.txt.tt (auto_too_much_owing)
+ok   AUTO_RENEWALS email.html.tt (item_denied_renewal)
+ok   AUTO_RENEWALS email.txt.tt (item_denied_renewal)
+ok   AUTO_RENEWALS sms.txt.tt (item_denied_renewal)
+ok   AUTO_RENEWALS email.html.tt (unknown_reason)
+ok   AUTO_RENEWALS email.txt.tt (unknown_reason)
+ok   AUTO_RENEWALS sms.txt.tt (unknown_reason)
+ok   AUTO_RENEWALS_DGST email.html.tt (renewed)
+ok   AUTO_RENEWALS_DGST email.txt.tt (renewed)
+ok   AUTO_RENEWALS_DGST sms.txt.tt (renewed)
+ok   AUTO_RENEWALS_DGST email.html.tt (last_renewal)
+ok   AUTO_RENEWALS_DGST email.txt.tt (last_renewal)
+ok   AUTO_RENEWALS_DGST sms.txt.tt (last_renewal)
+ok   AUTO_RENEWALS_DGST email.html.tt (not_renewed)
+ok   AUTO_RENEWALS_DGST email.txt.tt (not_renewed)
+ok   AUTO_RENEWALS_DGST sms.txt.tt (not_renewed)
+ok   AUTO_RENEWALS_DGST email.html.tt (mixed)
+ok   AUTO_RENEWALS_DGST email.txt.tt (mixed)
+ok   AUTO_RENEWALS_DGST sms.txt.tt (mixed)
+ok   CHECKIN email.html.tt
+ok   CHECKIN email.txt.tt
+ok   CHECKIN sms.txt.tt
+ok   CHECKOUT email.html.tt
+ok   CHECKOUT email.txt.tt
+ok   CHECKOUT sms.txt.tt
+ok   DUE email.html.tt
+ok   DUE email.txt.tt
+ok   DUE sms.txt.tt
+ok   DUEDGST email.html.tt (one)
+ok   DUEDGST email.txt.tt (one)
+ok   DUEDGST sms.txt.tt (one)
+ok   DUEDGST email.html.tt (three)
+ok   DUEDGST email.txt.tt (three)
+ok   DUEDGST sms.txt.tt (three)
+ok   HOLD email.html.tt
+ok   HOLD email.txt.tt
+ok   HOLD print.html.tt
+ok   HOLD sms.txt.tt
+ok   HOLDDGST email.html.tt (one)
+ok   HOLDDGST email.txt.tt (one)
+ok   HOLDDGST sms.txt.tt (one)
+ok   HOLDDGST email.html.tt (three)
+ok   HOLDDGST email.txt.tt (three)
+ok   HOLDDGST sms.txt.tt (three)
+ok   HOLDDGST email.html.tt (two_libraries)
+ok   HOLDDGST email.txt.tt (two_libraries)
+ok   HOLDDGST sms.txt.tt (two_libraries)
+ok   HOLD_REMINDER email.html.tt (one)
+ok   HOLD_REMINDER email.txt.tt (one)
+ok   HOLD_REMINDER print.html.tt (one)
+ok   HOLD_REMINDER sms.txt.tt (one)
+ok   HOLD_REMINDER email.html.tt (three)
+ok   HOLD_REMINDER email.txt.tt (three)
+ok   HOLD_REMINDER print.html.tt (three)
+ok   HOLD_REMINDER sms.txt.tt (three)
+ok   ISSUESLIP print.html.tt
+ok   MEMBERSHIP_EXPIRY email.html.tt
+ok   MEMBERSHIP_EXPIRY email.txt.tt
+ok   MEMBERSHIP_EXPIRY print.html.tt
+ok   MEMBERSHIP_EXPIRY sms.txt.tt
+ok   ODUE email.html.tt (no_fine)
+ok   ODUE email.txt.tt (no_fine)
+ok   ODUE print.html.tt (no_fine)
+ok   ODUE sms.txt.tt (no_fine)
+ok   ODUE email.html.tt (fine)
+ok   ODUE email.txt.tt (fine)
+ok   ODUE print.html.tt (fine)
+ok   ODUE sms.txt.tt (fine)
+ok   ODUE email.html.tt (restricted)
+ok   ODUE email.txt.tt (restricted)
+ok   ODUE print.html.tt (restricted)
+ok   ODUE sms.txt.tt (restricted)
+ok   ODUE email.html.tt (many)
+ok   ODUE email.txt.tt (many)
+ok   ODUE print.html.tt (many)
+ok   ODUE sms.txt.tt (many)
+ok   ODUE2 email.html.tt (no_fine)
+ok   ODUE2 email.txt.tt (no_fine)
+ok   ODUE2 print.html.tt (no_fine)
+ok   ODUE2 sms.txt.tt (no_fine)
+ok   ODUE2 email.html.tt (fine)
+ok   ODUE2 email.txt.tt (fine)
+ok   ODUE2 print.html.tt (fine)
+ok   ODUE2 sms.txt.tt (fine)
+ok   ODUE2 email.html.tt (restricted)
+ok   ODUE2 email.txt.tt (restricted)
+ok   ODUE2 print.html.tt (restricted)
+ok   ODUE2 sms.txt.tt (restricted)
+ok   ODUE2 email.html.tt (many)
+ok   ODUE2 email.txt.tt (many)
+ok   ODUE2 print.html.tt (many)
+ok   ODUE2 sms.txt.tt (many)
+ok   ODUE3 email.html.tt (no_fine)
+ok   ODUE3 email.txt.tt (no_fine)
+ok   ODUE3 print.html.tt (no_fine)
+ok   ODUE3 sms.txt.tt (no_fine)
+ok   ODUE3 email.html.tt (fine)
+ok   ODUE3 email.txt.tt (fine)
+ok   ODUE3 print.html.tt (fine)
+ok   ODUE3 sms.txt.tt (fine)
+ok   ODUE3 email.html.tt (restricted)
+ok   ODUE3 email.txt.tt (restricted)
+ok   ODUE3 print.html.tt (restricted)
+ok   ODUE3 sms.txt.tt (restricted)
+ok   ODUE3 email.html.tt (many)
+ok   ODUE3 email.txt.tt (many)
+ok   ODUE3 print.html.tt (many)
+ok   ODUE3 sms.txt.tt (many)
+ok   PASSWORD_RESET email.html.tt (library_name_set)
+ok   PASSWORD_RESET email.txt.tt (library_name_set)
+ok   PASSWORD_RESET email.html.tt (library_name_empty)
+ok   PASSWORD_RESET email.txt.tt (library_name_empty)
+ok   PREDUE email.html.tt
+ok   PREDUE email.txt.tt
+ok   PREDUE sms.txt.tt
+ok   PREDUEDGST email.html.tt (one)
+ok   PREDUEDGST email.txt.tt (one)
+ok   PREDUEDGST sms.txt.tt (one)
+ok   PREDUEDGST email.html.tt (three)
+ok   PREDUEDGST email.txt.tt (three)
+ok   PREDUEDGST sms.txt.tt (three)
+ok   WELCOME email.html.tt (own_user_name)
+ok   WELCOME email.txt.tt (own_user_name)
+ok   WELCOME print.html.tt (own_user_name)
+ok   WELCOME email.html.tt (card_as_user_name)
+ok   WELCOME email.txt.tt (card_as_user_name)
+ok   WELCOME print.html.tt (card_as_user_name)
+
+Koha 26.05.02.002: 159 of 159 passed
+
+== Previews checked against Koha's output (tools/preview.mjs --check)
+ok   AUTO_RENEWALS
+ok   AUTO_RENEWALS_DGST
+ok   CHECKIN
+ok   CHECKOUT
+ok   DUE
+ok   DUEDGST
+ok   HOLD
+ok   HOLDDGST
+ok   HOLD_REMINDER
+ok   ISSUESLIP
+ok   MEMBERSHIP_EXPIRY
+ok   ODUE
+ok   ODUE2
+ok   ODUE3
+ok   PASSWORD_RESET
+ok   PREDUE
+ok   PREDUEDGST
+ok   WELCOME
+
+159 outputs checked, 0 notices with problems, 0 pictures (0 KB)
+
+== Install, check out, restore (tools/e2e-install.mjs)
+ok   a dry run writes nothing
+ok   install
+ok   the notices changed
+ok   installing again changes nothing, and keeps the library’s values
+ok   the checkout worked
+ok   Koha queued one message for the visit
+ok   it is our text, with our two loans
+ok   with the library’s name, colour and footer
+ok   no tag and no separator reached the message
+ok   the subject is ours, with Koha’s library name
+ok   it was queued, not sent
+     made and deleted: patron 44525, items 120712,120713, loans 65085,65086; {"borrower_message_preferences":1,"message_queue":1,"action_logs":5,"statistics":2,"items":2,"issues":2,"borrowers":1,"borrower_message_transport_preferences":1}
+ok   restore
+ok   every one of the 299 tables is as it was
+     counters that moved on (no data): borrower_message_preferences 43868 -> 43869, issues 65085 -> 65087, borrowers 44525 -> 44526, items 120712 -> 120714, message_queue 34099 -> 34100, letter 34397 -> 34399, action_logs 261277 -> 261282
+
+[tested] TESTED.md: Koha 26.05.02.002, 159 checks
+
+RESULT: all passed

@@ -3,8 +3,25 @@
 Clean, mobile-friendly notices for Koha: ready-to-paste templates for *Tools → Notices and slips*, each run through
 a real Koha checkout, check-in or slip print before it is published.
 
-> **Work in progress.** Version 1.0.0 is not out yet. The notices below already pass the live test; the rest of the
-> set, the previews and the install tool follow.
+[![Checks](https://github.com/kohasolutions/koha-notice-templates/actions/workflows/ci.yml/badge.svg)](https://github.com/kohasolutions/koha-notice-templates/actions/workflows/ci.yml)
+[![Licence: GPL-3.0-or-later](https://img.shields.io/badge/licence-GPL--3.0--or--later-blue)](LICENSE)
+[![Tested on Koha 26.05](https://img.shields.io/badge/tested%20on-Koha%2026.05-2e7d32)](TESTED.md)
+
+18 notices, each in every format Koha sends it in, **159 of 159 checks passed on Koha 26.05.02** ([TESTED.md](TESTED.md);
+the full run log is attached to each [release](https://github.com/kohasolutions/koha-notice-templates/releases)).
+
+<p>
+  <img src="notices/ODUE/preview-phone.png" alt="The first overdue notice on a phone, as Koha produced it" width="250">
+  <img src="notices/HOLD/preview-phone.png" alt="The hold-ready notice on a phone, as Koha produced it" width="250">
+  <img src="notices/CHECKOUT/preview-phone.png" alt="The checkout receipt on a phone, as Koha produced it" width="250">
+</p>
+
+Every notice folder has pictures of what Koha really sent: `preview-phone.png`, `preview-desktop.png`,
+`preview-sms.png` and, where there is one, `preview-print.png`.
+
+Want your own colours and layout without editing code? The
+[notice template builder](https://github.com/kohasolutions/koha-notice-template-builder) makes these templates in the
+browser, with eight designs and a live preview.
 
 | Code | Koha menu | What it is | Email (HTML) | Email (text) | SMS | Print |
 |---|---|---|---|---|---|---|
@@ -80,6 +97,20 @@ everything back. It fails on a Koha error, a value that printed empty, or a dige
 `node tools/e2e-install.mjs` (test Koha only) installs notices, checks two items out to a patron made for it, reads the
 message, restores, and compares every table of the database with how it was.
 `node tools/lint.mjs` checks the layout and the Template Toolkit syntax in CI.
+`bash tools/test-live.sh` runs all of it and writes `test-run.txt`, the log attached to each release.
+
+These notices were checked on Koha 26.05.02 only. Nothing here was run on another release: on an older Koha, try
+one notice on a test patron before relying on it.
+
+## Related
+
+- [Koha notices and slips](https://kohasolutions.com/knowledge-base/koha-notices-and-slips): how the notice editor
+  works, where each notice is triggered, and why a value prints blank.
+- [koha-notice-template-builder](https://github.com/kohasolutions/koha-notice-template-builder): build these notices
+  in the browser with your own colours.
+- [koha-sql-reports](https://github.com/kohasolutions/koha-sql-reports) and
+  [koha-backup](https://github.com/kohasolutions/koha-backup): more free tools for Koha.
+- The Koha manual on [notices and slips](https://koha-community.org/manual/latest/en/html/tools.html#notices-and-slips).
 
 ## Licence
 
